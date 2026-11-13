@@ -1,0 +1,44 @@
+# Sources = the organisations that publish the data (Data Commons "Source" node = Croissant "creator").
+# One entry per organisation; feeds and registries refer to it by its key.
+#
+#   <key>:                 letters, digits and _ ; used in the dcid <namespace>Source_<key>
+#     name:    official organisation name (required)
+#     url:     official home page, https (required)
+#     short:   optional short name / acronym, shown in provenance names (e.g. KNBS)
+#     aliases: other names and spellings of the SAME organisation. A sheet saying "KNBS", "Kenya Bureau of
+#              Statistics" or "Kenya National Bureau of Statistics" is matched to this one source, and every
+#              name is added to the search text of its variables, so searching any of them finds the data.
+#     dcid:    optional: reuse an existing Data Commons Source instead of creating one (e.g. dc/s/WorldBank).
+#              It is only referenced, never redefined, so this instance can never change base Data Commons.
+
+OWID:
+  name: "Our World in Data"
+  url: "https://ourworldindata.org/"
+  short: "OWID"
+
+WorldBank:
+  name: "World Bank"
+  url: "https://www.worldbank.org/"
+  dcid: "dc/s/WorldBank"
+  aliases: ["The World Bank", "World Bank Group", "WB"]
+
+ZIMSTAT:
+  name: "Zimbabwe National Statistics Agency"
+  url: "https://www.zimstat.co.zw/"
+  short: "ZIMSTAT"
+  aliases: ["Zimbabwe National Statistics Agency (ZIMSTAT)", "Zimstat", "Zimbabwe Statistics Agency",
+            "Zimbabwe National Statistics"]
+
+KNBS:
+  name: "Kenya National Bureau of Statistics"
+  url: "https://www.knbs.or.ke/"
+  short: "KNBS"
+  aliases: ["Kenya Bureau of Statistics", "Kenya National Bureau of Statistic", "KenyaBureauOfStatistics",
+            "Kenya Natl Bureau of Statistics"]
+
+INSP_DRC:
+  name: "Institut National de Santé Publique (RDC)"
+  url: "https://insp.cd/"
+  short: "INSP"
+  aliases: ["INSP", "Institut National de Sante Publique", "National Institute of Public Health DRC",
+            "INSP RDC", "INSP DRC"]

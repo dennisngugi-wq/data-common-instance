@@ -1,0 +1,2 @@
+# Only for the planned GCP mode (Cloud Run job writing to the DCP bucket)
+google-cloud-storage==3.2.0

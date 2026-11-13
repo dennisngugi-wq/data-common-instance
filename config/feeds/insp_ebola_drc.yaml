@@ -1,0 +1,84 @@
+# Ebola virus disease outbreak, Democratic Republic of the Congo, by province, from the INSP situation reports
+# (SitReps) extracted by the ebola-data-commons pipeline (Projects/ebola-data-commons).
+#
+# DATA LOCATION: the full daily history lives in that pipeline's private GCS bucket
+#   (input/ebola_drc_provinces_all_dates.csv). Until this instance can read it, the feed reads the snapshot copied
+#   from ebola-data-commons/input/ebola_drc_provinces.csv (report of 2026-07-14, 3 provinces). To go live, replace
+#   fetch.path with fetch.url (a public or signed URL of the production CSV) - nothing else changes.
+# LICENCE: INSP states no licence for the SitRep figures (not guessed). The data loads; the Croissant JSON-LD is
+#   withheld until a licence URL is confirmed (set dataset.license + license_evidence, remove `unlicensed`).
+
+enabled: true
+source: INSP_DRC
+unlicensed: load_without_croissant
+
+dataset:
+  name: "Ebola virus disease outbreak in the DRC by province (INSP situation reports)"
+  description: >-
+    Ebola virus disease (EVD) outbreak figures for provinces of the Democratic Republic of the Congo, taken from the
+    situation reports (SitReps) published by the Institut National de Santé Publique (INSP): running totals of
+    confirmed Ebola cases and of deaths attributed to Ebola, the number of health zones reporting at least one case,
+    the total number of health zones and the health zones newly reporting a case in the previous 24 hours, by
+    province and report date. Country figures for the DRC are the sum of the affected provinces.
+  url: "https://insp.cd/category/sitrep/"
+
+provenance:
+  name: "INSP Ebola SitRep"
+
+fetch:
+  type: csv
+  path: "data/inbox/insp_ebola/ebola_drc_provinces.csv"
+
+mapping:
+  place: {column: Province, match: name, type: AdministrativeArea1, within: country/COD}
+  date: {column: Date}
+  values:
+    Count_MedicalConditionIncident_EbolaVirusDisease: ebola_confirmed_cases
+    Count_MortalityEvent_EbolaVirusDisease: ebola_deaths
+    Count_HealthZoneAffected_EbolaVirusDisease: ebola_health_zones_affected
+    Count_HealthZone: health_zones_total
+    Daily_Count_HealthZoneAffected_EbolaVirusDisease: ebola_health_zones_newly_affected
+  # DRC country figure = sum of the provinces (the SitRep tables are by province). Not for health_zones_total:
+  # the file lists only affected provinces, so their sum is not the country's number of health zones.
+  totals:
+    place: country/COD
+    variables: [ebola_confirmed_cases, ebola_deaths, ebola_health_zones_affected, ebola_health_zones_newly_affected]
+    reason: "running totals by province add up to the country; the SitRep lists every affected province"
+
+variables:
+  ebola_confirmed_cases:
+    name: "Confirmed Ebola cases"
+    description: >-
+      Running total of confirmed Ebola virus disease cases reported for the province as of the report date
+      (INSP situation report).
+    group: "Health/Ebola"
+    population_type: MedicalConditionIncident
+    constraints: {medicalCondition: EbolaVirusDisease}
+    min: 0
+  ebola_deaths:
+    name: "Ebola deaths"
+    description: "Running total of deaths attributed to Ebola virus disease in the province as of the report date."
+    group: "Health/Ebola"
+    population_type: MortalityEvent
+    constraints: {causeOfDeath: EbolaVirusDisease}
+    min: 0
+  ebola_health_zones_affected:
+    name: "Health zones affected by Ebola"
+    description: "Number of health zones in the province reporting at least one Ebola case."
+    group: "Health/Ebola"
+    population_type: HealthZone
+    constraints: {affectedByDisease: EbolaVirusDisease}
+    min: 0
+  health_zones_total:
+    name: "Health zones (total)"
+    description: "Total number of health zones in the province."
+    group: "Health/Ebola"
+    population_type: HealthZone
+    min: 0
+  ebola_health_zones_newly_affected:
+    name: "Health zones newly affected by Ebola (last 24 hours)"
+    description: "Number of health zones newly reporting an Ebola case in the 24 hours before the report."
+    group: "Health/Ebola"
+    population_type: HealthZone
+    constraints: {affectedByDisease: EbolaVirusDisease}
+    min: 0

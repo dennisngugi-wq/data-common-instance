@@ -1,0 +1,252 @@
+{#- DataCommon Project: /drilldown — follow one variable from the top down: World -> continents -> countries ->
+    provinces / states / counties -> districts / towns, as deep as the data goes. Each level shows every sub-place
+    with its latest value, date and source (linked to the original publisher); click a place to go one level down.
+    Uses only this site's Data Commons APIs (/core/api/v2/node and /observation). -#}
+{%- extends BASE_HTML -%}
+{% set main_id = 'dcp-drill' %}
+{% set page_id = 'page-drilldown' %}
+{% set title = 'Explore by place' %}
+{% block head %}
+<style>
+  #dcp-drill { max-width: 1100px; margin: 0 auto; padding: 28px 16px 64px; font-family: "Google Sans Text", Roboto, sans-serif; }
+  #dcp-drill h1 { font-size: 2.1rem; font-weight: 400; margin: 0 0 6px; }
+  #dcp-drill .lead { color: #444; margin-bottom: 18px; }
+  .dd-pick { position: relative; margin-bottom: 14px; }
+  .dd-pick input { width: 100%; padding: 12px 18px; border: 1px solid #c4c7c5; border-radius: 28px; font-size: 1rem; }
+  .dd-sugg { position: absolute; z-index: 20; left: 0; right: 0; background: #fff; border: 1px solid #dadce0;
+    border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.12); max-height: 360px; overflow: auto; display: none; }
+  .dd-sugg div { padding: 9px 16px; cursor: pointer; font-size: .93rem; }
+  .dd-sugg div:hover, .dd-sugg div.on { background: #e8f0fe; }
+  .dd-sugg small { color: #5f6368; display: block; }
+  .dd-crumbs { margin: 10px 0 4px; font-size: .95rem; }
+  .dd-crumbs a { cursor: pointer; }
+  .dd-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 22px; margin: 6px 0 14px; }
+  .dd-head h2 { font-size: 1.45rem; font-weight: 400; margin: 0; }
+  .dd-big { font-size: 1.6rem; }
+  .dd-note { color: #5f6368; font-size: .85rem; }
+  table.dd { width: 100%; border-collapse: collapse; font-size: .93rem; }
+  table.dd th { text-align: left; font-weight: 500; color: #444; border-bottom: 2px solid #e3e3e3; padding: 8px 6px; }
+  table.dd td { border-bottom: 1px solid #eee; padding: 7px 6px; vertical-align: middle; }
+  table.dd td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.dd .bar { height: 10px; background: #4285f4; border-radius: 5px; min-width: 1px; }
+  table.dd a.down { cursor: pointer; font-weight: 500; }
+  .dd-types { margin: 0 0 10px; font-size: .88rem; }
+  .dd-types button { border: 1px solid #c4c7c5; background: #fff; border-radius: 16px; padding: 4px 12px; margin: 0 6px 6px 0; cursor: pointer; }
+  .dd-types button.on { background: #e8f0fe; border-color: #0b57d0; color: #0b57d0; }
+</style>
+{% endblock %}
+{% block content %}
+<div id="dcp-drill">
+  <h1>Explore by place</h1>
+  <p class="lead">Pick an indicator, then go from the top level down through countries, provinces, counties and
+    districts. Every number links to its source.</p>
+  <div class="dd-pick">
+    <input id="dd-var" type="search" autocomplete="off"
+           placeholder="Indicator (e.g. population, CO2, births, ZIMSTAT, KNBS) or a Data Commons variable id">
+    <div id="dd-sugg" class="dd-sugg"></div>
+  </div>
+  <div id="dd-crumbs" class="dd-crumbs"></div>
+  <div id="dd-out"></div>
+</div>
+<script>
+(function () {
+  'use strict';
+  // Levels in order; a place's sub-places are searched from the level after its own type.
+  var LEVELS = ['Continent', 'Country', 'State', 'AdministrativeArea1', 'County', 'AdministrativeArea2',
+                'AdministrativeArea3', 'City', 'Town', 'Village', 'AdministrativeArea4', 'AdministrativeArea5'];
+  var TYPE_NAMES = {Continent: 'Continents', Country: 'Countries', State: 'States', AdministrativeArea1: 'Provinces / states / regions',
+    County: 'Counties', AdministrativeArea2: 'Districts / counties', AdministrativeArea3: 'Sub-districts / divisions',
+    City: 'Cities', Town: 'Towns', Village: 'Villages', AdministrativeArea4: 'Wards / localities', AdministrativeArea5: 'Localities'};
+  var params = new URLSearchParams(location.search);
+  var state = {v: params.get('v') || 'DCProject_population_total', path: (params.get('path') || params.get('place') ||
+               'Earth,africa').split(','), type: params.get('type') || ''};
+  var names = {Earth: 'World'}, vars = null, srcs = [];
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+  function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function post(path, body) {
+    return fetch('/core/api/v2/' + path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)}).then(function (r) { return r.json(); });
+  }
+  function fmt(v) {
+    if (v == null) return '–';
+    var a = Math.abs(v);
+    return a >= 1e9 ? (v / 1e9).toFixed(2) + ' B' : a >= 1e6 ? (v / 1e6).toFixed(2) + ' M' :
+      v.toLocaleString(undefined, {maximumFractionDigits: a < 10 ? 3 : 1});
+  }
+  function arcs(resp, dcid, prop) {
+    return (((((resp.data || {})[dcid] || {}).arcs || {})[prop] || {}).nodes) || [];
+  }
+
+  // ---------- indicator picker (this instance's variables + their sources' names and aliases)
+  fetch('/custom_dc/custom/variables.json').then(function (r) { return r.json(); }).then(function (d) {
+    srcs = d.sources.map(function (s) { return norm(s.keywords); });
+    vars = d.variables.map(function (v) { return {dcid: v[0], name: v[1], src: d.sources[v[2]].name,
+      key: norm(v[1]), skey: srcs[v[2]]}; });
+    var cur = vars.filter(function (v) { return v.dcid === state.v; })[0];
+    $('dd-var').value = cur ? cur.name : state.v;
+  });
+  function suggest() {
+    var box = $('dd-sugg'), words = norm($('dd-var').value).split(' ').filter(Boolean);
+    if (!vars || !words.length) { box.style.display = 'none'; return; }
+    var hits = [];
+    for (var i = 0; i < vars.length && hits.length < 40; i++) {
+      var v = vars[i], ok = words.every(function (w) { return v.key.indexOf(w) >= 0 || v.skey.indexOf(w) >= 0; });
+      if (ok) hits.push(v);
+    }
+    hits.sort(function (a, b) { return a.name.length - b.name.length; });
+    box.innerHTML = hits.slice(0, 12).map(function (v) {
+      return '<div data-v="' + esc(v.dcid) + '">' + esc(v.name) + '<small>' + esc(v.src) + '</small></div>';
+    }).join('') || '<div data-v="' + esc($('dd-var').value.trim()) + '">Use “' + esc($('dd-var').value.trim()) +
+      '” as a Data Commons variable id</div>';
+    box.style.display = 'block';
+  }
+  $('dd-var').addEventListener('input', suggest);
+  $('dd-var').addEventListener('focus', suggest);
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('#dd-sugg div');
+    if (t) { state.v = t.getAttribute('data-v'); $('dd-var').value = t.firstChild.textContent; go(); }
+    if (!e.target.closest('.dd-pick')) $('dd-sugg').style.display = 'none';
+  });
+
+  // ---------- drill-down
+  function go() {
+    var p = new URLSearchParams({v: state.v, path: state.path.join(',')});
+    if (state.type) p.set('type', state.type);
+    history.replaceState(null, '', '/drilldown?' + p.toString());
+    $('dd-sugg').style.display = 'none';
+    render();
+  }
+  function crumbs() {
+    $('dd-crumbs').innerHTML = state.path.map(function (d, i) {
+      var n = esc(names[d] || d);
+      return i === state.path.length - 1 ? '<b>' + n + '</b>' : '<a data-up="' + i + '">' + n + '</a>';
+    }).join(' › ');
+  }
+  document.addEventListener('click', function (e) {
+    var up = e.target.closest('[data-up]'), down = e.target.closest('[data-down]'), ty = e.target.closest('[data-type]');
+    if (up) { state.path = state.path.slice(0, +up.getAttribute('data-up') + 1); state.type = ''; go(); }
+    if (down) { state.path.push(down.getAttribute('data-down')); state.type = ''; go(); }
+    if (ty) { state.type = ty.getAttribute('data-type'); go(); }
+  });
+
+  function observe(dcids) {
+    return post('observation', {select: ['entity', 'variable', 'value', 'date', 'facet'], entity: {dcids: dcids},
+      variable: {dcids: [state.v]}, date: 'LATEST'}).then(function (d) {
+      var out = {}, by = (((d.byVariable || {})[state.v] || {}).byEntity) || {};
+      Object.keys(by).forEach(function (e) {
+        var f = (by[e].orderedFacets || [])[0];
+        if (f && f.observations && f.observations.length) {
+          var meta = (d.facets || {})[f.facetId] || {};
+          out[e] = {value: f.observations[0].value, date: f.observations[0].date, src: meta.importName || '',
+                    url: meta.provenanceUrl || '', unit: meta.unit || ''};
+        }
+      });
+      return out;
+    });
+  }
+
+  function render() {
+    var place = state.path[state.path.length - 1];
+    crumbs();
+    $('dd-out').innerHTML = '<p class="dd-note">Loading…</p>';
+    Promise.all([
+      post('node', {nodes: [place], property: '->[name,typeOf]'}),
+      post('node', {nodes: [state.v], property: '->[name,measuredProperty]'}),
+      observe([place])
+    ]).then(function (r) {
+      var pname = (arcs(r[0], place, 'name')[0] || {}).value || place;
+      names[place] = place === 'Earth' ? 'World' : pname; crumbs();
+      var types = arcs(r[0], place, 'typeOf').map(function (n) { return n.dcid; });
+      var vname = (arcs(r[1], state.v, 'name')[0] || {}).value || state.v;
+      var isCount = arcs(r[1], state.v, 'measuredProperty').some(function (n) { return n.dcid === 'count'; });
+      var own = r[2][place];
+      var start = place === 'Earth' ? 0 : Math.max.apply(null, types.map(function (t) { return LEVELS.indexOf(t); })) + 1;
+      if (start < 1 && place !== 'Earth') start = 1;
+      var candidates = state.type ? [state.type] : LEVELS.slice(start);
+      return findLevel(place, candidates, 0, []).then(function (lvl) {
+        draw(place, vname, isCount, own, lvl, LEVELS.slice(start));
+      });
+    }).catch(function (e) { $('dd-out').innerHTML = '<p>Could not load the data (' + esc(e) + ').</p>'; });
+  }
+
+  // First level below the place that has data for the variable.
+  function findLevel(place, types, i, tried) {
+    if (i >= types.length) return Promise.resolve({type: null, rows: [], tried: tried});
+    var t = types[i];
+    return post('node', {nodes: [place], property: '<-containedInPlace{typeOf:' + t + '}'}).then(function (resp) {
+      var kids = arcs(resp, place, 'containedInPlace').filter(function (n) { return n.dcid; });
+      if (!kids.length) return findLevel(place, types, i + 1, tried);
+      kids.forEach(function (k) { names[k.dcid] = k.name || k.dcid; });
+      return observe(kids.map(function (k) { return k.dcid; })).then(function (vals) {
+        var rows = kids.map(function (k) { return {dcid: k.dcid, name: k.name || k.dcid, obs: vals[k.dcid]}; });
+        var withData = rows.filter(function (x) { return x.obs; });
+        tried.push({type: t, places: kids.length, withData: withData.length});
+        if (!withData.length) return findLevel(place, types, i + 1, tried);
+        return {type: t, rows: rows, tried: tried};
+      });
+    });
+  }
+
+  function draw(place, vname, isCount, own, lvl, levels) {
+    var html = ['<div class="dd-head"><h2>' + esc(vname) + ' — ' + esc(names[place]) + '</h2>'];
+    if (own) {
+      html.push('<span class="dd-big">' + fmt(own.value) + '</span><span class="dd-note">' + esc(own.date) +
+        (own.url ? ' · source: <a href="' + esc(own.url) + '" target="_blank" rel="noopener">' + esc(own.src || 'source') + ' ↗</a>' : '') + '</span>');
+    }
+    html.push('<a class="dd-note" href="/place/' + esc(place) + '">Place page</a><a class="dd-note" ' +
+      'href="/tools/visualization#visType%3Dtimeline%26place%3D' + encodeURIComponent(place) + '%26sv%3D' +
+      encodeURIComponent(JSON.stringify({dcid: state.v})) + '">Chart over time</a></div>');
+    if (!lvl.type) {
+      html.push('<p>No sub-places below ' + esc(names[place]) + ' have data for this indicator' +
+        (lvl.tried.length ? ' (checked ' + lvl.tried.map(function (x) { return esc(TYPE_NAMES[x.type] || x.type); }).join(', ') + ')' : '') +
+        '. This is the most detailed level available.</p>');
+      $('dd-out').innerHTML = html.join(''); return;
+    }
+    var rows = lvl.rows.slice().sort(function (a, b) {
+      return (b.obs ? b.obs.value : -Infinity) - (a.obs ? a.obs.value : -Infinity); });
+    var have = rows.filter(function (x) { return x.obs; });
+    var max = Math.max.apply(null, have.map(function (x) { return Math.abs(x.obs.value); }).concat([1e-12]));
+    html.push('<div class="dd-types">Level: ' + levels.filter(function (t) { return t === lvl.type || state.type === t; })
+      .concat(lvl.tried.filter(function (x) { return x.type !== lvl.type; }).map(function (x) { return x.type; }))
+      .filter(function (t, i, a) { return a.indexOf(t) === i; }).map(function (t) {
+        return '<button data-type="' + t + '" class="' + (t === lvl.type ? 'on' : '') + '">' + esc(TYPE_NAMES[t] || t) + '</button>';
+      }).join('') + '</div>');
+    var note = have.length + ' of ' + rows.length + ' ' + esc((TYPE_NAMES[lvl.type] || lvl.type).toLowerCase()) + ' have data';
+    if (isCount && have.length) {
+      var sum = have.reduce(function (s, x) { return s + x.obs.value; }, 0);
+      note += ' · sum of those listed: <b>' + fmt(sum) + '</b> (computed here from the latest value of each; ' +
+        'dates can differ)';
+    }
+    html.push('<p class="dd-note">' + note + '. Click a place to see its sub-divisions.</p>');
+    html.push('<table class="dd"><tr><th>' + esc(TYPE_NAMES[lvl.type] || lvl.type) + '</th><th class="num">Value</th>' +
+      '<th style="width:28%"></th><th>Date</th><th>Source</th></tr>');
+    rows.forEach(function (x) {
+      var o = x.obs;
+      html.push('<tr><td><a class="down" data-down="' + esc(x.dcid) + '">' + esc(x.name) + '</a></td>' +
+        '<td class="num">' + (o ? fmt(o.value) : '–') + '</td><td>' + (o ? '<div class="bar" style="width:' +
+        (100 * Math.abs(o.value) / max).toFixed(1) + '%"></div>' : '') + '</td><td>' + (o ? esc(o.date) : '') +
+        '</td><td>' + (o && o.url ? '<a href="' + esc(o.url) + '" target="_blank" rel="noopener">' + esc(o.src || 'source') +
+        ' ↗</a>' : o ? esc(o.src) : '') + '</td></tr>');
+    });
+    html.push('</table>');
+    $('dd-out').innerHTML = html.join('');
+  }
+  // Always show the trail from the World down (World › Africa › Eastern Africa › Kenya ...), even when the link names
+  // only the last place (e.g. ?place=country/ZWE from the Data sources page): ancestors come from places.json.
+  fetch('/custom_dc/custom/places.json').then(function (r) { return r.json(); }).then(function (d) {
+    var byId = {};
+    (d.places || []).forEach(function (p) { byId[p.dcid] = p; names[p.dcid] = p.name; });
+    var first = state.path[0];
+    if (first !== 'Earth') {
+      var head = byId[first] && byId[first].up ? byId[first].up : ['Earth'];
+      state.path = head.concat(state.path);
+    }
+  }).catch(function () {
+    if (state.path[0] !== 'Earth') state.path = ['Earth'].concat(state.path);
+  }).then(render);
+})();
+</script>
+{% endblock %}

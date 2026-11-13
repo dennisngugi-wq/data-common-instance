@@ -1,0 +1,56 @@
+# Dataset registry: the team's ZIMSTAT sheet (99 Zimbabwe National Statistics Agency datasets).
+# Every run downloads the WHOLE workbook (all four tabs are kept as they are in local_store/registries/zimstat/),
+# logs datasets added/removed/changed, and loads each row of the "Extracted" tab as its own dataset.
+# Add a row to the sheet -> it is loaded the next night. Knowledge note: mcp agent/knowledge/sources/zimstat-dataset-sheet.md
+
+enabled: true
+
+sheet:
+  sheet_id: "1ZJqKs5QYiFDFussdAwz7dSXO4N0dKsdC"     # https://docs.google.com/spreadsheets/d/<sheet_id>/edit
+datasets_tab: "Extracted"
+default_source: ZIMSTAT        # used when the "Source Organization" cell is empty
+allow_future: true             # the registry includes population projections (to 2042)
+
+# Sheet column for each field (these are the defaults, written out for clarity).
+columns:
+  id: "Dataset ID"                     # SDMX dataflow, e.g. ZW1,WDSR_PROV,1.0
+  name: "Dataset Name"                 # Croissant name
+  description: "Description"           # Croissant description (completed with the facts below if short)
+  organisation: "Source Organization"  # Croissant creator (matched to config/sources.yaml by name or alias)
+  url: "Source URL"                    # landing page
+  provenance_url: "Provenance URL"
+  content_url: "Source file link"      # the data API (contentUrl of the original)
+  license: "License URL"
+  license_name: "License Type"
+  domain: "Domain"
+  subdomain: "Sub-domain"
+  update_frequency: "update_frequency"
+  last_update: "source_last_update_date"
+  min_date: "Min Date"
+  max_date: "Max Date"
+
+# Every dataset's licence is "NOT FOUND" in the sheet (portal is Cloudflare-gated; confirm with ZIMSTAT).
+# Licences are never guessed: the data is loaded, but no Croissant JSON-LD is published for these datasets until
+# a licence URL is entered in the sheet ("License URL" column). Remove this line to not load unlicensed data.
+unlicensed: load_without_croissant
+
+data:
+  type: jsonstat
+  method: POST
+  body: []
+
+mapping:
+  # REF_AREA codes that are areas of Zimbabwe. Other codes (e.g. Malawi, South Africa in the labour-migrant
+  # tables: where Zimbabweans work) are not data about those countries and are skipped.
+  place_codes: '^(ZW|ZW_\d|ZW_[A-Z]{2}|ZW_\d{3}|[A-Z]{2})$'
+  place_map: {ZW: country/ZWE}
+  place_within: country/ZWE
+  # Labels are matched to Data Commons' own list of Zimbabwe's places of that type first (generic words such as
+  # "Province" ignored), then the resolve API (districts only partly exist in Data Commons). Unmatched -> skipped.
+  place_types:                       # code pattern -> Data Commons place type used to resolve the label
+    '^ZW_\d$': AdministrativeArea1     # provinces (ZW_0 Bulawayo ... ZW_9)
+    '^[A-Z]{2}$': AdministrativeArea1  # provinces (BU, HA, MA, ...)
+    '^ZW_[A-Z]{2}$': AdministrativeArea1   # provinces (ZW_BA, ZW_MA, ...)
+    '^ZW_\d{3}$': AdministrativeArea2  # districts (ZW_101 Buhera, ...)
+  default_place: country/ZWE         # datasets without a geography dimension are national
+  variable_prefix: "ZIMSTAT_"

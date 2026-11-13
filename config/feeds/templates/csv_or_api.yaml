@@ -1,0 +1,61 @@
+# TEMPLATE: a CSV file, a JSON API or an HTML table on a custom website. Copy to config/feeds/<feed_id>.yaml.
+# See the starter feeds owid_co2_per_capita.yaml (CSV on a website) and worldbank_population.yaml (JSON API).
+
+enabled: false
+source: MyOrganisation
+
+dataset:
+  name: "Official title"
+  description: >-
+    50 to 5000 characters, factual: what is measured, for which places and years, how it is collected,
+    and by whom.
+  url: "https://example.org/dataset"
+  license: "https://creativecommons.org/licenses/by/4.0/"
+  license_evidence: "where the licence is stated"
+
+provenance:
+  name: "Short provenance name"
+
+# Pick ONE fetch block.
+fetch:
+  type: csv
+  url: "https://example.org/data/export.csv"        # or path: "data/inbox/file.csv"
+  # delimiter: ";"
+  # header_row: 1
+
+# fetch:
+#   type: json
+#   url: "https://example.org/api/v1/observations?indicator=X"
+#   records: "data.items"          # dot path to the list of records ("1" = second element of a top-level list)
+#   headers: {Authorization: "Bearer ${MY_API_TOKEN}"}   # ${VAR} is read from env.list; never put keys here
+
+# fetch:
+#   type: html_table
+#   url: "https://example.org/statistics/page.html"
+#   table: 0                       # 0 = first <table> on the page; or match: "text that appears in the table"
+
+# Wide layout (one column per variable):
+mapping:
+  place: {column: iso3, match: iso3}
+  date: {column: year}
+  values:
+    gdp_usd: my_gdp                # column -> variable key
+    unemployment_pct: {variable: my_unemployment, scale: 1}
+
+variables:
+  my_gdp:
+    name: "GDP (current US$)"
+    description: "Gross domestic product at purchasers' prices, current US dollars."
+    group: "Economy"
+    population_type: EconomicActivity
+    unit: USDollar                 # existing Data Commons unit dcid
+    min: 0
+  my_unemployment:
+    name: "Unemployment rate"
+    description: "Share of the labour force without work but available for and seeking employment."
+    group: "Economy"
+    population_type: Person
+    unit: Percent
+    min: 0
+    max: 100
+    # dcid: UnemploymentRate_Person   # optional: publish under an existing Data Commons variable instead

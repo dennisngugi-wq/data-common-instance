@@ -1,0 +1,2170 @@
+{
+ "_about": "World, 6 continents, 19 UN M49 sub-regions and 215 countries (ISO3 codes and common alternative names) with their Data Commons dcids. Copied from africa-dcp site/static/places.json (built from UN M49 + World Bank + Data Commons, checked 2026-11-11). Used to match place names/codes in feeds and as the base of the site's place search.",
+ "places": [
+  {
+   "dcid": "Earth",
+   "name": "World",
+   "type": "Place",
+   "parent": "",
+   "alt": [
+    "Earth",
+    "Global"
+   ]
+  },
+  {
+   "dcid": "africa",
+   "name": "Africa",
+   "type": "Continent",
+   "parent": "World",
+   "alt": []
+  },
+  {
+   "dcid": "asia",
+   "name": "Asia",
+   "type": "Continent",
+   "parent": "World",
+   "alt": []
+  },
+  {
+   "dcid": "europe",
+   "name": "Europe",
+   "type": "Continent",
+   "parent": "World",
+   "alt": []
+  },
+  {
+   "dcid": "northamerica",
+   "name": "North America",
+   "type": "Continent",
+   "parent": "World",
+   "alt": []
+  },
+  {
+   "dcid": "southamerica",
+   "name": "South America",
+   "type": "Continent",
+   "parent": "World",
+   "alt": []
+  },
+  {
+   "dcid": "oceania",
+   "name": "Oceania",
+   "type": "Continent",
+   "parent": "World",
+   "alt": []
+  },
+  {
+   "dcid": "AustraliaAndNewZealand",
+   "name": "Australia and New Zealand",
+   "type": "Region",
+   "parent": "Oceania",
+   "alt": []
+  },
+  {
+   "dcid": "Caribbean",
+   "name": "Caribbean",
+   "type": "Region",
+   "parent": "North America",
+   "alt": []
+  },
+  {
+   "dcid": "CentralAsia",
+   "name": "Central Asia",
+   "type": "Region",
+   "parent": "Asia",
+   "alt": []
+  },
+  {
+   "dcid": "EasternAfrica",
+   "name": "Eastern Africa",
+   "type": "Region",
+   "parent": "Africa",
+   "alt": []
+  },
+  {
+   "dcid": "EasternAsia",
+   "name": "Eastern Asia",
+   "type": "Region",
+   "parent": "Asia",
+   "alt": []
+  },
+  {
+   "dcid": "EasternEurope",
+   "name": "Eastern Europe",
+   "type": "Region",
+   "parent": "Europe",
+   "alt": []
+  },
+  {
+   "dcid": "Melanesia",
+   "name": "Melanesia",
+   "type": "Region",
+   "parent": "Oceania",
+   "alt": []
+  },
+  {
+   "dcid": "Micronesia",
+   "name": "Micronesia",
+   "type": "Region",
+   "parent": "Oceania",
+   "alt": []
+  },
+  {
+   "dcid": "MiddleAfrica",
+   "name": "Middle Africa",
+   "type": "Region",
+   "parent": "Africa",
+   "alt": []
+  },
+  {
+   "dcid": "NorthernAfrica",
+   "name": "Northern Africa",
+   "type": "Region",
+   "parent": "Africa",
+   "alt": []
+  },
+  {
+   "dcid": "NorthernEurope",
+   "name": "Northern Europe",
+   "type": "Region",
+   "parent": "Europe",
+   "alt": []
+  },
+  {
+   "dcid": "Polynesia",
+   "name": "Polynesia",
+   "type": "Region",
+   "parent": "Oceania",
+   "alt": []
+  },
+  {
+   "dcid": "SouthEasternAsia",
+   "name": "South-eastern Asia",
+   "type": "Region",
+   "parent": "Asia",
+   "alt": []
+  },
+  {
+   "dcid": "SouthernAfrica",
+   "name": "Southern Africa",
+   "type": "Region",
+   "parent": "Africa",
+   "alt": []
+  },
+  {
+   "dcid": "SouthernAsia",
+   "name": "Southern Asia",
+   "type": "Region",
+   "parent": "Asia",
+   "alt": []
+  },
+  {
+   "dcid": "SouthernEurope",
+   "name": "Southern Europe",
+   "type": "Region",
+   "parent": "Europe",
+   "alt": []
+  },
+  {
+   "dcid": "WesternAfrica",
+   "name": "Western Africa",
+   "type": "Region",
+   "parent": "Africa",
+   "alt": []
+  },
+  {
+   "dcid": "WesternAsia",
+   "name": "Western Asia",
+   "type": "Region",
+   "parent": "Asia",
+   "alt": []
+  },
+  {
+   "dcid": "WesternEurope",
+   "name": "Western Europe",
+   "type": "Region",
+   "parent": "Europe",
+   "alt": []
+  },
+  {
+   "dcid": "country/AFG",
+   "name": "Afghanistan",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "AFG"
+   ]
+  },
+  {
+   "dcid": "country/ALB",
+   "name": "Albania",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "ALB"
+   ]
+  },
+  {
+   "dcid": "country/DZA",
+   "name": "Algeria",
+   "type": "Country",
+   "parent": "Northern Africa, Africa",
+   "alt": [
+    "DZA"
+   ]
+  },
+  {
+   "dcid": "country/ASM",
+   "name": "American Samoa",
+   "type": "Country",
+   "parent": "Polynesia, Oceania",
+   "alt": [
+    "ASM"
+   ]
+  },
+  {
+   "dcid": "country/AND",
+   "name": "Andorra",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "AND"
+   ]
+  },
+  {
+   "dcid": "country/AGO",
+   "name": "Angola",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "AGO"
+   ]
+  },
+  {
+   "dcid": "country/ATG",
+   "name": "Antigua and Barbuda",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "ATG"
+   ]
+  },
+  {
+   "dcid": "country/ARG",
+   "name": "Argentina",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "ARG"
+   ]
+  },
+  {
+   "dcid": "country/ARM",
+   "name": "Armenia",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "ARM"
+   ]
+  },
+  {
+   "dcid": "country/ABW",
+   "name": "Aruba",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "ABW"
+   ]
+  },
+  {
+   "dcid": "country/AUS",
+   "name": "Australia",
+   "type": "Country",
+   "parent": "Australia and New Zealand, Oceania",
+   "alt": [
+    "AUS"
+   ]
+  },
+  {
+   "dcid": "country/AUT",
+   "name": "Austria",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "AUT"
+   ]
+  },
+  {
+   "dcid": "country/AZE",
+   "name": "Azerbaijan",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "AZE"
+   ]
+  },
+  {
+   "dcid": "country/BHS",
+   "name": "Bahamas",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "BHS",
+    "The Bahamas"
+   ]
+  },
+  {
+   "dcid": "country/BHR",
+   "name": "Bahrain",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "BHR"
+   ]
+  },
+  {
+   "dcid": "country/BGD",
+   "name": "Bangladesh",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "BGD"
+   ]
+  },
+  {
+   "dcid": "country/BRB",
+   "name": "Barbados",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "BRB"
+   ]
+  },
+  {
+   "dcid": "country/BLR",
+   "name": "Belarus",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "BLR"
+   ]
+  },
+  {
+   "dcid": "country/BEL",
+   "name": "Belgium",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "BEL"
+   ]
+  },
+  {
+   "dcid": "country/BLZ",
+   "name": "Belize",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "BLZ"
+   ]
+  },
+  {
+   "dcid": "country/BEN",
+   "name": "Benin",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "BEN"
+   ]
+  },
+  {
+   "dcid": "country/BMU",
+   "name": "Bermuda",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "BMU"
+   ]
+  },
+  {
+   "dcid": "country/BTN",
+   "name": "Bhutan",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "BTN"
+   ]
+  },
+  {
+   "dcid": "country/BOL",
+   "name": "Bolivia",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "BOL"
+   ]
+  },
+  {
+   "dcid": "country/BIH",
+   "name": "Bosnia and Herzegovina",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "BIH"
+   ]
+  },
+  {
+   "dcid": "country/BWA",
+   "name": "Botswana",
+   "type": "Country",
+   "parent": "Southern Africa, Africa",
+   "alt": [
+    "BWA"
+   ]
+  },
+  {
+   "dcid": "country/BRA",
+   "name": "Brazil",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "BRA"
+   ]
+  },
+  {
+   "dcid": "country/VGB",
+   "name": "British Virgin Islands",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "VGB"
+   ]
+  },
+  {
+   "dcid": "country/BRN",
+   "name": "Brunei",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "BRN"
+   ]
+  },
+  {
+   "dcid": "country/BGR",
+   "name": "Bulgaria",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "BGR"
+   ]
+  },
+  {
+   "dcid": "country/BFA",
+   "name": "Burkina Faso",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "BFA"
+   ]
+  },
+  {
+   "dcid": "country/BDI",
+   "name": "Burundi",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "BDI"
+   ]
+  },
+  {
+   "dcid": "country/KHM",
+   "name": "Cambodia",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "KHM"
+   ]
+  },
+  {
+   "dcid": "country/CMR",
+   "name": "Cameroon",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "CMR"
+   ]
+  },
+  {
+   "dcid": "country/CAN",
+   "name": "Canada",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "CAN"
+   ]
+  },
+  {
+   "dcid": "country/CPV",
+   "name": "Cape Verde",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "CPV",
+    "Cabo Verde"
+   ]
+  },
+  {
+   "dcid": "country/CYM",
+   "name": "Cayman Islands",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "CYM"
+   ]
+  },
+  {
+   "dcid": "country/CAF",
+   "name": "Central African Republic",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "CAF"
+   ]
+  },
+  {
+   "dcid": "country/TCD",
+   "name": "Chad",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "TCD"
+   ]
+  },
+  {
+   "dcid": "country/CHL",
+   "name": "Chile",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "CHL"
+   ]
+  },
+  {
+   "dcid": "country/CHN",
+   "name": "China",
+   "type": "Country",
+   "parent": "Eastern Asia, Asia",
+   "alt": [
+    "CHN"
+   ]
+  },
+  {
+   "dcid": "country/COL",
+   "name": "Colombia",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "COL"
+   ]
+  },
+  {
+   "dcid": "country/COM",
+   "name": "Comoros",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "COM"
+   ]
+  },
+  {
+   "dcid": "country/COD",
+   "name": "Congo [DRC]",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "COD",
+    "DRC",
+    "DR Congo",
+    "Democratic Republic of the Congo",
+    "Congo-Kinshasa"
+   ]
+  },
+  {
+   "dcid": "country/COG",
+   "name": "Congo [Republic]",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "COG",
+    "Republic of the Congo",
+    "Congo-Brazzaville",
+    "Congo"
+   ]
+  },
+  {
+   "dcid": "country/CRI",
+   "name": "Costa Rica",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "CRI"
+   ]
+  },
+  {
+   "dcid": "country/HRV",
+   "name": "Croatia",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "HRV"
+   ]
+  },
+  {
+   "dcid": "country/CUB",
+   "name": "Cuba",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "CUB"
+   ]
+  },
+  {
+   "dcid": "country/CUW",
+   "name": "Curaçao",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "CUW",
+    "Curacao"
+   ]
+  },
+  {
+   "dcid": "country/CYP",
+   "name": "Cyprus",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "CYP"
+   ]
+  },
+  {
+   "dcid": "country/CZE",
+   "name": "Czech Republic",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "CZE",
+    "Czechia"
+   ]
+  },
+  {
+   "dcid": "country/CIV",
+   "name": "Côte d'Ivoire",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "CIV",
+    "Ivory Coast",
+    "Cote d'Ivoire"
+   ]
+  },
+  {
+   "dcid": "country/DNK",
+   "name": "Denmark",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "DNK"
+   ]
+  },
+  {
+   "dcid": "country/DJI",
+   "name": "Djibouti",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "DJI"
+   ]
+  },
+  {
+   "dcid": "country/DMA",
+   "name": "Dominica",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "DMA"
+   ]
+  },
+  {
+   "dcid": "country/DOM",
+   "name": "Dominican Republic",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "DOM"
+   ]
+  },
+  {
+   "dcid": "country/TLS",
+   "name": "East Timor",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "TLS",
+    "Timor-Leste"
+   ]
+  },
+  {
+   "dcid": "country/ECU",
+   "name": "Ecuador",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "ECU"
+   ]
+  },
+  {
+   "dcid": "country/EGY",
+   "name": "Egypt",
+   "type": "Country",
+   "parent": "Northern Africa, Africa",
+   "alt": [
+    "EGY"
+   ]
+  },
+  {
+   "dcid": "country/SLV",
+   "name": "El Salvador",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "SLV"
+   ]
+  },
+  {
+   "dcid": "country/GNQ",
+   "name": "Equatorial Guinea",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "GNQ"
+   ]
+  },
+  {
+   "dcid": "country/ERI",
+   "name": "Eritrea",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "ERI"
+   ]
+  },
+  {
+   "dcid": "country/EST",
+   "name": "Estonia",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "EST"
+   ]
+  },
+  {
+   "dcid": "country/SWZ",
+   "name": "Eswatini",
+   "type": "Country",
+   "parent": "Southern Africa, Africa",
+   "alt": [
+    "SWZ",
+    "Swaziland"
+   ]
+  },
+  {
+   "dcid": "country/ETH",
+   "name": "Ethiopia",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "ETH"
+   ]
+  },
+  {
+   "dcid": "country/FRO",
+   "name": "Faroe Islands",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "FRO"
+   ]
+  },
+  {
+   "dcid": "country/FSM",
+   "name": "Federated States of Micronesia",
+   "type": "Country",
+   "parent": "Micronesia, Oceania",
+   "alt": [
+    "FSM",
+    "Micronesia"
+   ]
+  },
+  {
+   "dcid": "country/FJI",
+   "name": "Fiji",
+   "type": "Country",
+   "parent": "Melanesia, Oceania",
+   "alt": [
+    "FJI"
+   ]
+  },
+  {
+   "dcid": "country/FIN",
+   "name": "Finland",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "FIN"
+   ]
+  },
+  {
+   "dcid": "country/FRA",
+   "name": "France",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "FRA"
+   ]
+  },
+  {
+   "dcid": "country/PYF",
+   "name": "French Polynesia",
+   "type": "Country",
+   "parent": "Polynesia, Oceania",
+   "alt": [
+    "PYF"
+   ]
+  },
+  {
+   "dcid": "country/GAB",
+   "name": "Gabon",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "GAB"
+   ]
+  },
+  {
+   "dcid": "country/GMB",
+   "name": "Gambia",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "GMB",
+    "The Gambia"
+   ]
+  },
+  {
+   "dcid": "country/GEO",
+   "name": "Georgia",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "GEO"
+   ]
+  },
+  {
+   "dcid": "country/DEU",
+   "name": "Germany",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "DEU"
+   ]
+  },
+  {
+   "dcid": "country/GHA",
+   "name": "Ghana",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "GHA"
+   ]
+  },
+  {
+   "dcid": "country/GIB",
+   "name": "Gibraltar",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "GIB"
+   ]
+  },
+  {
+   "dcid": "country/GRC",
+   "name": "Greece",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "GRC"
+   ]
+  },
+  {
+   "dcid": "country/GRL",
+   "name": "Greenland",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "GRL"
+   ]
+  },
+  {
+   "dcid": "country/GRD",
+   "name": "Grenada",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "GRD"
+   ]
+  },
+  {
+   "dcid": "country/GUM",
+   "name": "Guam",
+   "type": "Country",
+   "parent": "Micronesia, Oceania",
+   "alt": [
+    "GUM"
+   ]
+  },
+  {
+   "dcid": "country/GTM",
+   "name": "Guatemala",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "GTM"
+   ]
+  },
+  {
+   "dcid": "country/GIN",
+   "name": "Guinea",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "GIN"
+   ]
+  },
+  {
+   "dcid": "country/GNB",
+   "name": "Guinea-Bissau",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "GNB"
+   ]
+  },
+  {
+   "dcid": "country/GUY",
+   "name": "Guyana",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "GUY"
+   ]
+  },
+  {
+   "dcid": "country/HTI",
+   "name": "Haiti",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "HTI"
+   ]
+  },
+  {
+   "dcid": "country/HND",
+   "name": "Honduras",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "HND"
+   ]
+  },
+  {
+   "dcid": "country/HKG",
+   "name": "Hong Kong",
+   "type": "Country",
+   "parent": "Eastern Asia, Asia",
+   "alt": [
+    "HKG"
+   ]
+  },
+  {
+   "dcid": "country/HUN",
+   "name": "Hungary",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "HUN"
+   ]
+  },
+  {
+   "dcid": "country/ISL",
+   "name": "Iceland",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "ISL"
+   ]
+  },
+  {
+   "dcid": "country/IND",
+   "name": "India",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "IND"
+   ]
+  },
+  {
+   "dcid": "country/IDN",
+   "name": "Indonesia",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "IDN"
+   ]
+  },
+  {
+   "dcid": "country/IRN",
+   "name": "Iran",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "IRN",
+    "Islamic Republic of Iran"
+   ]
+  },
+  {
+   "dcid": "country/IRQ",
+   "name": "Iraq",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "IRQ"
+   ]
+  },
+  {
+   "dcid": "country/IRL",
+   "name": "Ireland",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "IRL"
+   ]
+  },
+  {
+   "dcid": "country/IMN",
+   "name": "Isle of Man",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "IMN"
+   ]
+  },
+  {
+   "dcid": "country/ISR",
+   "name": "Israel",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "ISR"
+   ]
+  },
+  {
+   "dcid": "country/ITA",
+   "name": "Italy",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "ITA"
+   ]
+  },
+  {
+   "dcid": "country/JAM",
+   "name": "Jamaica",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "JAM"
+   ]
+  },
+  {
+   "dcid": "country/JPN",
+   "name": "Japan",
+   "type": "Country",
+   "parent": "Eastern Asia, Asia",
+   "alt": [
+    "JPN"
+   ]
+  },
+  {
+   "dcid": "country/JOR",
+   "name": "Jordan",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "JOR"
+   ]
+  },
+  {
+   "dcid": "country/KAZ",
+   "name": "Kazakhstan",
+   "type": "Country",
+   "parent": "Central Asia, Asia",
+   "alt": [
+    "KAZ"
+   ]
+  },
+  {
+   "dcid": "country/KEN",
+   "name": "Kenya",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "KEN"
+   ]
+  },
+  {
+   "dcid": "country/KIR",
+   "name": "Kiribati",
+   "type": "Country",
+   "parent": "Micronesia, Oceania",
+   "alt": [
+    "KIR"
+   ]
+  },
+  {
+   "dcid": "country/KWT",
+   "name": "Kuwait",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "KWT"
+   ]
+  },
+  {
+   "dcid": "country/KGZ",
+   "name": "Kyrgyzstan",
+   "type": "Country",
+   "parent": "Central Asia, Asia",
+   "alt": [
+    "KGZ",
+    "Kyrgyz Republic"
+   ]
+  },
+  {
+   "dcid": "country/LAO",
+   "name": "Laos",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "LAO",
+    "Lao PDR"
+   ]
+  },
+  {
+   "dcid": "country/LVA",
+   "name": "Latvia",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "LVA"
+   ]
+  },
+  {
+   "dcid": "country/LBN",
+   "name": "Lebanon",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "LBN"
+   ]
+  },
+  {
+   "dcid": "country/LSO",
+   "name": "Lesotho",
+   "type": "Country",
+   "parent": "Southern Africa, Africa",
+   "alt": [
+    "LSO"
+   ]
+  },
+  {
+   "dcid": "country/LBR",
+   "name": "Liberia",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "LBR"
+   ]
+  },
+  {
+   "dcid": "country/LBY",
+   "name": "Libya",
+   "type": "Country",
+   "parent": "Northern Africa, Africa",
+   "alt": [
+    "LBY"
+   ]
+  },
+  {
+   "dcid": "country/LIE",
+   "name": "Liechtenstein",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "LIE"
+   ]
+  },
+  {
+   "dcid": "country/LTU",
+   "name": "Lithuania",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "LTU"
+   ]
+  },
+  {
+   "dcid": "country/LUX",
+   "name": "Luxembourg",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "LUX"
+   ]
+  },
+  {
+   "dcid": "country/MAC",
+   "name": "Macau",
+   "type": "Country",
+   "parent": "Eastern Asia, Asia",
+   "alt": [
+    "MAC"
+   ]
+  },
+  {
+   "dcid": "country/MKD",
+   "name": "Macedonia [FYROM]",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "MKD",
+    "North Macedonia",
+    "Macedonia"
+   ]
+  },
+  {
+   "dcid": "country/MDG",
+   "name": "Madagascar",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "MDG"
+   ]
+  },
+  {
+   "dcid": "country/MWI",
+   "name": "Malawi",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "MWI"
+   ]
+  },
+  {
+   "dcid": "country/MYS",
+   "name": "Malaysia",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "MYS"
+   ]
+  },
+  {
+   "dcid": "country/MDV",
+   "name": "Maldives",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "MDV"
+   ]
+  },
+  {
+   "dcid": "country/MLI",
+   "name": "Mali",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "MLI"
+   ]
+  },
+  {
+   "dcid": "country/MLT",
+   "name": "Malta",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "MLT"
+   ]
+  },
+  {
+   "dcid": "country/MHL",
+   "name": "Marshall Islands",
+   "type": "Country",
+   "parent": "Micronesia, Oceania",
+   "alt": [
+    "MHL"
+   ]
+  },
+  {
+   "dcid": "country/MRT",
+   "name": "Mauritania",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "MRT"
+   ]
+  },
+  {
+   "dcid": "country/MUS",
+   "name": "Mauritius",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "MUS"
+   ]
+  },
+  {
+   "dcid": "country/MEX",
+   "name": "Mexico",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "MEX"
+   ]
+  },
+  {
+   "dcid": "country/MDA",
+   "name": "Moldova",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "MDA"
+   ]
+  },
+  {
+   "dcid": "country/MCO",
+   "name": "Monaco",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "MCO"
+   ]
+  },
+  {
+   "dcid": "country/MNG",
+   "name": "Mongolia",
+   "type": "Country",
+   "parent": "Eastern Asia, Asia",
+   "alt": [
+    "MNG"
+   ]
+  },
+  {
+   "dcid": "country/MNE",
+   "name": "Montenegro",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "MNE"
+   ]
+  },
+  {
+   "dcid": "country/MAR",
+   "name": "Morocco",
+   "type": "Country",
+   "parent": "Northern Africa, Africa",
+   "alt": [
+    "MAR"
+   ]
+  },
+  {
+   "dcid": "country/MOZ",
+   "name": "Mozambique",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "MOZ"
+   ]
+  },
+  {
+   "dcid": "country/MMR",
+   "name": "Myanmar",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "MMR",
+    "Burma"
+   ]
+  },
+  {
+   "dcid": "country/NAM",
+   "name": "Namibia",
+   "type": "Country",
+   "parent": "Southern Africa, Africa",
+   "alt": [
+    "NAM"
+   ]
+  },
+  {
+   "dcid": "country/NRU",
+   "name": "Nauru",
+   "type": "Country",
+   "parent": "Micronesia, Oceania",
+   "alt": [
+    "NRU"
+   ]
+  },
+  {
+   "dcid": "country/NPL",
+   "name": "Nepal",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "NPL"
+   ]
+  },
+  {
+   "dcid": "country/NLD",
+   "name": "Netherlands",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "NLD",
+    "Holland"
+   ]
+  },
+  {
+   "dcid": "country/NCL",
+   "name": "New Caledonia",
+   "type": "Country",
+   "parent": "Melanesia, Oceania",
+   "alt": [
+    "NCL"
+   ]
+  },
+  {
+   "dcid": "country/NZL",
+   "name": "New Zealand",
+   "type": "Country",
+   "parent": "Australia and New Zealand, Oceania",
+   "alt": [
+    "NZL"
+   ]
+  },
+  {
+   "dcid": "country/NIC",
+   "name": "Nicaragua",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "NIC"
+   ]
+  },
+  {
+   "dcid": "country/NER",
+   "name": "Niger",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "NER"
+   ]
+  },
+  {
+   "dcid": "country/NGA",
+   "name": "Nigeria",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "NGA"
+   ]
+  },
+  {
+   "dcid": "country/PRK",
+   "name": "North Korea",
+   "type": "Country",
+   "parent": "Eastern Asia, Asia",
+   "alt": [
+    "PRK",
+    "DPRK"
+   ]
+  },
+  {
+   "dcid": "country/MNP",
+   "name": "Northern Mariana Islands",
+   "type": "Country",
+   "parent": "Micronesia, Oceania",
+   "alt": [
+    "MNP"
+   ]
+  },
+  {
+   "dcid": "country/NOR",
+   "name": "Norway",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "NOR"
+   ]
+  },
+  {
+   "dcid": "country/OMN",
+   "name": "Oman",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "OMN"
+   ]
+  },
+  {
+   "dcid": "country/PAK",
+   "name": "Pakistan",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "PAK"
+   ]
+  },
+  {
+   "dcid": "country/PLW",
+   "name": "Palau",
+   "type": "Country",
+   "parent": "Micronesia, Oceania",
+   "alt": [
+    "PLW"
+   ]
+  },
+  {
+   "dcid": "country/PSE",
+   "name": "Palestinian Territories",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "PSE",
+    "Palestine",
+    "West Bank and Gaza"
+   ]
+  },
+  {
+   "dcid": "country/PAN",
+   "name": "Panama",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "PAN"
+   ]
+  },
+  {
+   "dcid": "country/PNG",
+   "name": "Papua New Guinea",
+   "type": "Country",
+   "parent": "Melanesia, Oceania",
+   "alt": [
+    "PNG"
+   ]
+  },
+  {
+   "dcid": "country/PRY",
+   "name": "Paraguay",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "PRY"
+   ]
+  },
+  {
+   "dcid": "country/PER",
+   "name": "Peru",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "PER"
+   ]
+  },
+  {
+   "dcid": "country/PHL",
+   "name": "Philippines",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "PHL"
+   ]
+  },
+  {
+   "dcid": "country/POL",
+   "name": "Poland",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "POL"
+   ]
+  },
+  {
+   "dcid": "country/PRT",
+   "name": "Portugal",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "PRT"
+   ]
+  },
+  {
+   "dcid": "country/PRI",
+   "name": "Puerto Rico",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "PRI"
+   ]
+  },
+  {
+   "dcid": "country/QAT",
+   "name": "Qatar",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "QAT"
+   ]
+  },
+  {
+   "dcid": "country/ROU",
+   "name": "Romania",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "ROU"
+   ]
+  },
+  {
+   "dcid": "country/RUS",
+   "name": "Russia",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "RUS",
+    "Russian Federation"
+   ]
+  },
+  {
+   "dcid": "country/RWA",
+   "name": "Rwanda",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "RWA"
+   ]
+  },
+  {
+   "dcid": "country/KNA",
+   "name": "Saint Kitts and Nevis",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "KNA"
+   ]
+  },
+  {
+   "dcid": "country/LCA",
+   "name": "Saint Lucia",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "LCA"
+   ]
+  },
+  {
+   "dcid": "country/MAF",
+   "name": "Saint Martin",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "MAF"
+   ]
+  },
+  {
+   "dcid": "country/VCT",
+   "name": "Saint Vincent and the Grenadines",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "VCT"
+   ]
+  },
+  {
+   "dcid": "country/WSM",
+   "name": "Samoa",
+   "type": "Country",
+   "parent": "Polynesia, Oceania",
+   "alt": [
+    "WSM"
+   ]
+  },
+  {
+   "dcid": "country/SMR",
+   "name": "San Marino",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "SMR"
+   ]
+  },
+  {
+   "dcid": "country/SAU",
+   "name": "Saudi Arabia",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "SAU"
+   ]
+  },
+  {
+   "dcid": "country/SEN",
+   "name": "Senegal",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "SEN"
+   ]
+  },
+  {
+   "dcid": "country/SRB",
+   "name": "Serbia",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "SRB"
+   ]
+  },
+  {
+   "dcid": "country/SYC",
+   "name": "Seychelles",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "SYC"
+   ]
+  },
+  {
+   "dcid": "country/SLE",
+   "name": "Sierra Leone",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "SLE"
+   ]
+  },
+  {
+   "dcid": "country/SGP",
+   "name": "Singapore",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "SGP"
+   ]
+  },
+  {
+   "dcid": "country/SXM",
+   "name": "Sint Maarten",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "SXM"
+   ]
+  },
+  {
+   "dcid": "country/SVK",
+   "name": "Slovakia",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "SVK",
+    "Slovak Republic"
+   ]
+  },
+  {
+   "dcid": "country/SVN",
+   "name": "Slovenia",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "SVN"
+   ]
+  },
+  {
+   "dcid": "country/SLB",
+   "name": "Solomon Islands",
+   "type": "Country",
+   "parent": "Melanesia, Oceania",
+   "alt": [
+    "SLB"
+   ]
+  },
+  {
+   "dcid": "country/SOM",
+   "name": "Somalia",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "SOM"
+   ]
+  },
+  {
+   "dcid": "country/ZAF",
+   "name": "South Africa",
+   "type": "Country",
+   "parent": "Southern Africa, Africa",
+   "alt": [
+    "ZAF"
+   ]
+  },
+  {
+   "dcid": "country/KOR",
+   "name": "South Korea",
+   "type": "Country",
+   "parent": "Eastern Asia, Asia",
+   "alt": [
+    "KOR",
+    "Korea",
+    "Republic of Korea"
+   ]
+  },
+  {
+   "dcid": "country/SSD",
+   "name": "South Sudan",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "SSD"
+   ]
+  },
+  {
+   "dcid": "country/ESP",
+   "name": "Spain",
+   "type": "Country",
+   "parent": "Southern Europe, Europe",
+   "alt": [
+    "ESP"
+   ]
+  },
+  {
+   "dcid": "country/LKA",
+   "name": "Sri Lanka",
+   "type": "Country",
+   "parent": "Southern Asia, Asia",
+   "alt": [
+    "LKA"
+   ]
+  },
+  {
+   "dcid": "country/SDN",
+   "name": "Sudan",
+   "type": "Country",
+   "parent": "Northern Africa, Africa",
+   "alt": [
+    "SDN"
+   ]
+  },
+  {
+   "dcid": "country/SUR",
+   "name": "Suriname",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "SUR"
+   ]
+  },
+  {
+   "dcid": "country/SWE",
+   "name": "Sweden",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "SWE"
+   ]
+  },
+  {
+   "dcid": "country/CHE",
+   "name": "Switzerland",
+   "type": "Country",
+   "parent": "Western Europe, Europe",
+   "alt": [
+    "CHE"
+   ]
+  },
+  {
+   "dcid": "country/SYR",
+   "name": "Syria",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "SYR"
+   ]
+  },
+  {
+   "dcid": "country/STP",
+   "name": "São Tomé and Príncipe",
+   "type": "Country",
+   "parent": "Middle Africa, Africa",
+   "alt": [
+    "STP",
+    "Sao Tome and Principe"
+   ]
+  },
+  {
+   "dcid": "country/TJK",
+   "name": "Tajikistan",
+   "type": "Country",
+   "parent": "Central Asia, Asia",
+   "alt": [
+    "TJK"
+   ]
+  },
+  {
+   "dcid": "country/TZA",
+   "name": "Tanzania",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "TZA",
+    "United Republic of Tanzania"
+   ]
+  },
+  {
+   "dcid": "country/THA",
+   "name": "Thailand",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "THA"
+   ]
+  },
+  {
+   "dcid": "country/TGO",
+   "name": "Togo",
+   "type": "Country",
+   "parent": "Western Africa, Africa",
+   "alt": [
+    "TGO"
+   ]
+  },
+  {
+   "dcid": "country/TON",
+   "name": "Tonga",
+   "type": "Country",
+   "parent": "Polynesia, Oceania",
+   "alt": [
+    "TON"
+   ]
+  },
+  {
+   "dcid": "country/TTO",
+   "name": "Trinidad and Tobago",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "TTO"
+   ]
+  },
+  {
+   "dcid": "country/TUN",
+   "name": "Tunisia",
+   "type": "Country",
+   "parent": "Northern Africa, Africa",
+   "alt": [
+    "TUN"
+   ]
+  },
+  {
+   "dcid": "country/TUR",
+   "name": "Turkey",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "TUR",
+    "Turkiye",
+    "Türkiye"
+   ]
+  },
+  {
+   "dcid": "country/TKM",
+   "name": "Turkmenistan",
+   "type": "Country",
+   "parent": "Central Asia, Asia",
+   "alt": [
+    "TKM"
+   ]
+  },
+  {
+   "dcid": "country/TCA",
+   "name": "Turks and Caicos Islands",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "TCA"
+   ]
+  },
+  {
+   "dcid": "country/TUV",
+   "name": "Tuvalu",
+   "type": "Country",
+   "parent": "Polynesia, Oceania",
+   "alt": [
+    "TUV"
+   ]
+  },
+  {
+   "dcid": "country/VIR",
+   "name": "U.S. Virgin Islands",
+   "type": "Country",
+   "parent": "Caribbean, North America",
+   "alt": [
+    "VIR"
+   ]
+  },
+  {
+   "dcid": "country/UGA",
+   "name": "Uganda",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "UGA"
+   ]
+  },
+  {
+   "dcid": "country/UKR",
+   "name": "Ukraine",
+   "type": "Country",
+   "parent": "Eastern Europe, Europe",
+   "alt": [
+    "UKR"
+   ]
+  },
+  {
+   "dcid": "country/ARE",
+   "name": "United Arab Emirates",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "ARE",
+    "UAE"
+   ]
+  },
+  {
+   "dcid": "country/GBR",
+   "name": "United Kingdom",
+   "type": "Country",
+   "parent": "Northern Europe, Europe",
+   "alt": [
+    "GBR",
+    "UK",
+    "Great Britain",
+    "Britain",
+    "England"
+   ]
+  },
+  {
+   "dcid": "country/USA",
+   "name": "United States",
+   "type": "Country",
+   "parent": "North America",
+   "alt": [
+    "USA",
+    "USA",
+    "US",
+    "United States of America",
+    "America"
+   ]
+  },
+  {
+   "dcid": "country/URY",
+   "name": "Uruguay",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "URY"
+   ]
+  },
+  {
+   "dcid": "country/UZB",
+   "name": "Uzbekistan",
+   "type": "Country",
+   "parent": "Central Asia, Asia",
+   "alt": [
+    "UZB"
+   ]
+  },
+  {
+   "dcid": "country/VUT",
+   "name": "Vanuatu",
+   "type": "Country",
+   "parent": "Melanesia, Oceania",
+   "alt": [
+    "VUT"
+   ]
+  },
+  {
+   "dcid": "country/VEN",
+   "name": "Venezuela",
+   "type": "Country",
+   "parent": "South America",
+   "alt": [
+    "VEN"
+   ]
+  },
+  {
+   "dcid": "country/VNM",
+   "name": "Vietnam",
+   "type": "Country",
+   "parent": "South-eastern Asia, Asia",
+   "alt": [
+    "VNM",
+    "Viet Nam"
+   ]
+  },
+  {
+   "dcid": "country/YEM",
+   "name": "Yemen",
+   "type": "Country",
+   "parent": "Western Asia, Asia",
+   "alt": [
+    "YEM"
+   ]
+  },
+  {
+   "dcid": "country/ZMB",
+   "name": "Zambia",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "ZMB"
+   ]
+  },
+  {
+   "dcid": "country/ZWE",
+   "name": "Zimbabwe",
+   "type": "Country",
+   "parent": "Eastern Africa, Africa",
+   "alt": [
+    "ZWE"
+   ]
+  }
+ ]
+}

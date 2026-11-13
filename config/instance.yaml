@@ -1,0 +1,30 @@
+# Instance settings. One file; every other setting has a safe default.
+
+# Shown in the site header and browser tab, and used as the Croissant "publisher" (the aggregator).
+# The original data publishers are the "creators" (config/sources.yaml).
+name: "DataCommon Project"
+
+# Prefix of every dcid this instance creates (statistical variables, groups, units, datasets, provenances),
+# e.g. DCProject_co2_per_capita. Letters, digits and _ only. Do NOT change it after the first load:
+# every dcid would change and the old ones would disappear from the site.
+namespace: "DCProject"
+
+# Public base URL of the website. Croissant "url" of a dataset = <site_url>/browser/<dataset dcid>.
+# Change it when the site gets a real domain (also set SITE_URL in .env).
+site_url: "http://localhost:8090"
+
+# Optional: public base URL where the published CSVs can be downloaded, as <public_data_url>/<import>/<import>.csv
+# (e.g. a public GCS bucket). Written to each provenance as downloadUrl (Croissant contentUrl). Leave empty until
+# such a download exists: contentUrl must be a real file, never a landing page.
+public_data_url: ""
+
+# Observations before this year are rejected (catches typos such as 202 or 1024).
+earliest_year: 1800
+
+validation:
+  # A feed that suddenly delivers fewer rows than were published before is rejected (the previous version stays
+  # live) when the drop is larger than this share: protects against an emptied sheet or a truncated download.
+  # Override per feed with `max_row_drop_share` in the feed file.
+  max_row_drop_share: 0.2
+  # Warn (not fail) when a published value is revised by more than this share.
+  large_revision_share: 0.5

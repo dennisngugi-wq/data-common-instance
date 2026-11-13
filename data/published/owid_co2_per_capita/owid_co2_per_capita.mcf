@@ -1,0 +1,14 @@
+Node: ddd:DCProjectProv_owid_co2_per_capita
+typeOf: dcid:Provenance
+name: "OWID CO2 emissions per capita"
+description: "Annual carbon dioxide (CO2) emissions per person from burning fossil fuels and industrial processes (transport, electricity generation, heating, cement), excluding land-use change, in tonnes of CO2 per person. Emissions come from the Global Carbon Project's Global Carbon Budget and are divided by population estimates from multiple sources; compiled and processed by Our World in Data for every country and the World."
+source: dcid:DCProjectSource_OWID
+isPartOf: dcid:DCProjectDataset_owid_co2_per_capita
+provenanceCategory: dcid:StatisticsProvenance
+url: "https://ourworldindata.org/grapher/co-emissions-per-capita"
+license: "https://creativecommons.org/licenses/by/4.0/"
+lastDataRefreshDate: "2026-11-13"
+earliestDataImportDate: "2026-11-13"
+sourceDataUrl: "https://ourworldindata.org/grapher/co-emissions-per-capita.csv?v=1&csvType=full&useColumnShortNames=true"
+earliestObservationDate: "1750"
+latestObservationDate: "2025"

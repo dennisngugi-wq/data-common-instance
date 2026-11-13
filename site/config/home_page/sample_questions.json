@@ -1,0 +1,28 @@
+[
+  {
+    "category": "Zimbabwe National Statistics Agency",
+    "questions": [
+      "Birth Registration from Civil Registration System in Zimbabwe",
+      "Business Tendency Survey, Manufacturing and Mining in Zimbabwe",
+      "Crops Production in Zimbabwe"
+    ]
+  },
+  {
+    "category": "Institut National de Santé Publique (RDC)",
+    "questions": [
+      "Confirmed Ebola cases in Congo [DRC]"
+    ]
+  },
+  {
+    "category": "Our World in Data",
+    "questions": [
+      "CO2 emissions per capita in Kenya"
+    ]
+  },
+  {
+    "category": "World Bank",
+    "questions": [
+      "Total population in Kenya"
+    ]
+  }
+]

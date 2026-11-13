@@ -1,0 +1,60 @@
+# Starter feed 1: a CSV published on a website (Our World in Data).
+# Listed in the agreed Country x Indicator catalogue (Climate and Environment / CO2 emissions, creator OWID).
+
+enabled: true
+source: OWID                       # key in config/sources.yaml (Croissant creator)
+
+dataset:                           # Data Commons Dataset node = the Croissant sc:Dataset that gets indexed
+  name: "CO2 emissions per capita (Our World in Data)"
+  description: >-
+    Annual carbon dioxide (CO2) emissions per person from burning fossil fuels and industrial processes
+    (transport, electricity generation, heating, cement), excluding land-use change, in tonnes of CO2 per person.
+    Emissions come from the Global Carbon Project's Global Carbon Budget and are divided by population estimates
+    from multiple sources; compiled and processed by Our World in Data for every country and the World.
+  url: "https://ourworldindata.org/grapher/co-emissions-per-capita"
+  license: "https://creativecommons.org/licenses/by/4.0/"
+  license_evidence: >-
+    https://ourworldindata.org/faqs#can-i-reuse-or-republish-your-data: data produced by Our World in Data is
+    "licensed under CC BY, unless stated otherwise"; the chart's metadata.json states no other licence;
+    checked 2026-11-13.
+  # Official citation from the chart's metadata.json (citationShort)
+  citation: >-
+    Global Carbon Budget (2026); Population based on various sources (2024) - with major processing by
+    Our World in Data
+
+provenance:
+  name: "OWID CO2 emissions per capita"
+
+fetch:
+  type: csv
+  url: "https://ourworldindata.org/grapher/co-emissions-per-capita.csv?v=1&csvType=full&useColumnShortNames=true"
+
+mapping:
+  place: {column: code, match: iso3}
+  date: {column: year}
+  values:
+    emissions_total_per_capita: co2_emissions_per_capita
+  # OWID also lists regions and income groups (e.g. "Africa (GCP)") that have no country code: leave them out.
+  unresolved_places: skip
+  earliest_year: 1750              # OWID's series starts in 1750 (instance default: 1800)
+  # Reviewed exclusions (never widen a variable's min/max to let a bad value through; list it here with a reason).
+  exclude:
+    - place: SXM
+      date: "1956"
+      variable: co2_emissions_per_capita
+      reason: >-
+        1,062 t CO2 per person is physically implausible (global maximum ~70); Sint Maarten (Dutch part) in the
+        Netherlands Antilles era. Flagged 2026-11-13; ask OWID / Global Carbon Project before publishing.
+
+variables:
+  co2_emissions_per_capita:
+    name: "CO2 emissions per capita"
+    description: >-
+      Annual carbon dioxide emissions from fossil fuels and industry (excluding land-use change) divided by
+      population, in tonnes of CO2 per person. Source: Global Carbon Budget via Our World in Data.
+    group: "Climate and Environment"
+    population_type: Person
+    unit: {key: TonnesCO2PerPerson, name: "Tonnes of CO2 per person",
+           description: "Tonnes of carbon dioxide emitted per person in a year."}
+    min: 0
+    max: 1000

@@ -1,0 +1,44 @@
+# TEMPLATE: an Excel workbook, downloaded from a website (url) or dropped into data/inbox/ (path).
+# Copy to config/feeds/<feed_id>.yaml and set enabled: true. Only .xlsx/.xlsm (not the old .xls: save it as .xlsx).
+#
+# Wide layout with years as columns, typical of statistics-office tables, e.g.
+#   County   | 2019 | 2020 | 2021
+#   Nairobi  | 4.39 | 4.48 | 4.56
+
+enabled: false
+source: MyOrganisation
+
+dataset:
+  name: "Official title of the table or publication"
+  description: >-
+    50 to 5000 characters, factual: what is measured, for which places and years, how it is collected,
+    and by whom.
+  url: "https://example.org/publication-page"
+  license: "https://creativecommons.org/licenses/by/4.0/"
+  license_evidence: "where the licence is stated"
+
+provenance:
+  name: "Short provenance name"
+
+fetch:
+  type: excel
+  path: "data/inbox/my_table.xlsx"     # or: url: "https://example.org/files/table.xlsx"
+  sheet: "Table 1"                     # sheet name (default: the first sheet)
+  header_row: 3                        # row with the column names (rows above it are titles, skipped)
+
+mapping:
+  place: {column: County, match: name, type: AdministrativeArea1, within: country/KEN}
+  year_columns: true                   # every column named like a year (2019, 2020, ...) holds values
+  variable: population_millions
+  scale: 1000000                       # multiply cell values (here: millions -> people)
+  # stop_at_blank_row: true            # ignore notes below the table (default true for excel)
+
+variables:
+  population_millions:
+    name: "County population"
+    description: "Resident population of the county (mid-year estimate)."
+    group: "Demographics"
+    population_type: Person
+    measured_property: count
+    min: 0
+    max: 100000000
