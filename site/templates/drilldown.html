@@ -1,7 +1,3 @@
-{#- DataCommon Project: /drilldown — follow one variable from the top down: World -> continents -> countries ->
-    provinces / states / counties -> districts / towns, as deep as the data goes. Each level shows every sub-place
-    with its latest value, date and source (linked to the original publisher); click a place to go one level down.
-    Uses only this site's Data Commons APIs (/core/api/v2/node and /observation). -#}
 {%- extends BASE_HTML -%}
 {% set main_id = 'dcp-drill' %}
 {% set page_id = 'page-drilldown' %}
@@ -51,7 +47,6 @@
 <script>
 (function () {
   'use strict';
-  // Levels in order; a place's sub-places are searched from the level after its own type.
   var LEVELS = ['Continent', 'Country', 'State', 'AdministrativeArea1', 'County', 'AdministrativeArea2',
                 'AdministrativeArea3', 'City', 'Town', 'Village', 'AdministrativeArea4', 'AdministrativeArea5'];
   var TYPE_NAMES = {Continent: 'Continents', Country: 'Countries', State: 'States', AdministrativeArea1: 'Provinces / states / regions',
@@ -80,7 +75,6 @@
     return (((((resp.data || {})[dcid] || {}).arcs || {})[prop] || {}).nodes) || [];
   }
 
-  // ---------- indicator picker (this instance's variables + their sources' names and aliases)
   fetch('/custom_dc/custom/variables.json').then(function (r) { return r.json(); }).then(function (d) {
     srcs = d.sources.map(function (s) { return norm(s.keywords); });
     vars = d.variables.map(function (v) { return {dcid: v[0], name: v[1], src: d.sources[v[2]].name,
@@ -111,7 +105,6 @@
     if (!e.target.closest('.dd-pick')) $('dd-sugg').style.display = 'none';
   });
 
-  // ---------- drill-down
   function go() {
     var p = new URLSearchParams({v: state.v, path: state.path.join(',')});
     if (state.type) p.set('type', state.type);
@@ -172,7 +165,6 @@
     }).catch(function (e) { $('dd-out').innerHTML = '<p>Could not load the data (' + esc(e) + ').</p>'; });
   }
 
-  // First level below the place that has data for the variable.
   function findLevel(place, types, i, tried) {
     if (i >= types.length) return Promise.resolve({type: null, rows: [], tried: tried});
     var t = types[i];
@@ -234,8 +226,6 @@
     html.push('</table>');
     $('dd-out').innerHTML = html.join('');
   }
-  // Always show the trail from the World down (World › Africa › Eastern Africa › Kenya ...), even when the link names
-  // only the last place (e.g. ?place=country/ZWE from the Data sources page): ancestors come from places.json.
   fetch('/custom_dc/custom/places.json').then(function (r) { return r.json(); }).then(function (d) {
     var byId = {};
     (d.places || []).forEach(function (p) { byId[p.dcid] = p; names[p.dcid] = p.name; });

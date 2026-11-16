@@ -1,20 +1,3 @@
-"""Read and check config/: instance.yaml, sources.yaml, places.yaml and feeds/*.yaml.
-
-Every dcid the instance creates is derived here, in one place:
-
-  statistical variable   <NS>_<variable key>              (or the variable's own `dcid`, e.g. Count_Person)
-  measured property      <NS>_<variable key>_Value         (rates, %, money; `measured_property: count` for counts)
-  unit                   <NS>Unit_<unit key>               (or an existing unit dcid such as Percent, USDollar)
-  statvar group          <NS>Group_<group slug>, under <NS>Group_Root, under dc/g/Root
-  source                 <NS>Source_<source key>           (or the source's own `dcid`, e.g. dc/s/WorldBank)
-  dataset                <NS>Dataset_<feed id>             (or the dataset's own `dcid`)
-  provenance             <NS>Prov_<feed id>
-  import                 <feed id>  (+ <ns>_schema for the shared schema)
-
-Structure problems are returned as messages (`problems`), never raised, so one broken feed file cannot stop the
-others: the feed is skipped and the run report says why.
-"""
-
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,14 +26,14 @@ class Variable:
     description: str
     group: str
     population_type: str
-    measured_property: str          # dcid
-    custom_property: bool           # True: define <NS>_<key>_Value in the schema
-    unit: str | None                # unit dcid or None
+    measured_property: str
+    custom_property: bool
+    unit: str | None
     stat_type: str
     constraints: dict
     min: float | None
     max: float | None
-    existing: bool                  # True: an existing Data Commons statvar, not defined here
+    existing: bool
     raw: dict = field(repr=False, default_factory=dict)
 
 
@@ -64,19 +47,17 @@ class Feed:
     provenance: dict
     fetch: dict
     mapping: dict
-    variables: list                 # variable keys this feed publishes
+    variables: list
     max_row_drop_share: float
     allow_future: bool
     dataset_dcid: str = ""
     provenance_dcid: str = ""
-    dynamic: bool = False           # variables discovered from the data (registry datasets), not declared
-    license_pending: bool = False   # licence not yet confirmed: data loads, Croissant JSON-LD is withheld
-    registry: str = ""              # id of the dataset registry (config/registries/) this feed comes from
-    meta: dict = field(default_factory=dict)   # registry row (all columns, as in the sheet)
+    dynamic: bool = False
+    registry: str = ""
+    meta: dict = field(default_factory=dict)
 
 
 def group_chain(ns, path):
-    """"A/B/C" -> [(dcid, name, parent dcid)], each level a StatVarGroup under the previous one (top: root)."""
     parts = [p.strip() for p in str(path).split("/") if p.strip()] or ["Other"]
     out, parent = [], f"{ns}Group_Root"
     for i, name in enumerate(parts):
@@ -94,18 +75,16 @@ def group_dcid(ns, path):
 class Registry:
     instance: dict
     ns: str
-    sources: dict                   # key -> {"dcid","name","url","existing"}
-    feeds: dict                     # feed id -> Feed (enabled and structurally valid only)
-    variables: dict                 # key -> Variable
-    units: dict                     # unit dcid -> {"name","description"} for custom units
-    groups: dict                    # group dcid -> (name, parent dcid)
-    aliases: dict                   # normalised alias -> dcid
-    problems: dict                  # feed id (or "config") -> [messages]
+    sources: dict
+    feeds: dict
+    variables: dict
+    units: dict
+    groups: dict
+    aliases: dict
+    problems: dict
     disabled: list
 
     def restrict(self, feed_ids):
-        """Copy holding only these feeds and the variables, groups and units they use (for the schema of what
-        is actually published: a feed that never passed validation adds no empty Dataset or variable)."""
         feeds = {k: v for k, v in self.feeds.items() if k in feed_ids}
         keys = {k for f in feeds.values() for k in f.variables}
         variables = {k: v for k, v in self.variables.items() if k in keys}
@@ -119,7 +98,6 @@ class Registry:
                         disabled=self.disabled)
 
     def source_key_for(self, name):
-        """Source key for an organisation name, short name, key or alias (case, accents, punctuation ignored)."""
         k = norm_name(name)
         if not k:
             return None
@@ -152,8 +130,6 @@ def _load_yaml(path, problems, owner):
 
 
 def norm_name(text):
-    """Organisation names compare without case, accents, punctuation or spaces:
-    "Kenya Bureau of Statistics" == "KenyaBureauOfStatistics" == "kenya-bureau of statistics"."""
     from places import norm
     return norm(text).replace(" ", "")
 
@@ -163,7 +139,6 @@ def _text(value):
 
 
 def load(config_dir=None, include_disabled=()):
-    """include_disabled: feed ids to load even with enabled: false (for --check of a new feed)."""
     config_dir = Path(config_dir or settings.CONFIG_DIR)
     problems = {}
     instance = _load_yaml(config_dir / "instance.yaml", problems, "config") or {}
@@ -180,7 +155,6 @@ def load(config_dir=None, include_disabled=()):
     val.setdefault("max_row_drop_share", 0.2)
     val.setdefault("large_revision_share", 0.5)
 
-    # ---- sources
     sources = {}
     for key, s in (_load_yaml(config_dir / "sources.yaml", problems, "config") or {}).items():
         s = s or {}
@@ -201,28 +175,35 @@ def load(config_dir=None, include_disabled=()):
                              "url": s["url"], "existing": bool(s.get("dcid")), "aliases": aliases_,
                              "short": _text(s.get("short") or "")}
     seen_names = {}
-    for key, src in sources.items():   # one organisation, one source: a name or alias may not point to two keys
+    for key, src in sources.items():
         for n in [src["name"], src["short"], key] + src["aliases"]:
             k = norm_name(n)
             if k and seen_names.setdefault(k, key) != key:
                 problems.setdefault("config", []).append(
                     f"sources.yaml: {n!r} is used by both {seen_names[k]} and {key}: merge them into one source")
 
-    # ---- place aliases
-    from places import norm  # local import: places imports settings only
+    from places import norm
     aliases = {}
     places_cfg = _load_yaml(config_dir / "places.yaml", problems, "config") or {}
     for alias, dcid in (places_cfg.get("aliases") or {}).items():
         aliases[norm(alias)] = str(dcid)
 
-    # ---- feeds
     feeds, variables, units, groups, disabled = {}, {}, {}, {}, []
     var_owner = {}
-    for path in sorted((config_dir / "feeds").glob("*.yaml")):
-        fid = path.stem
+    import sheets
+    custom = sheets.overrides(config_dir, "custom", problems)
+    paths = {p.stem: p for p in sorted((config_dir / "feeds").glob("*.yaml"))}
+    for fid in sorted(set(custom) - set(paths)):
+        if custom[fid]["enabled"]:
+            problems.setdefault(fid, []).append(
+                f"sheets.json lists {fid!r} as custom, but config/feeds/{fid}.yaml (its column mapping) is missing")
+    for fid, path in paths.items():
         data = _load_yaml(path, problems, fid)
         if data is None:
             continue
+        if fid in custom:
+            data["enabled"] = custom[fid]["enabled"]
+            data["fetch"] = sheets.apply_link(data.get("fetch"), custom[fid])
         if not data.get("enabled", False) and fid not in include_disabled:
             disabled.append(fid)
             continue
@@ -241,8 +222,8 @@ def load(config_dir=None, include_disabled=()):
         if not (mapping.get("year_columns") or isinstance(mapping.get("date"), dict)):
             msgs.append("mapping.date is required, e.g. {column: Year} (or year_columns: true)")
         dataset = data.get("dataset") or {}
-        for k in ("url", "license", "license_evidence", "citation"):   # optional (licence pending): same shape as
-            dataset[k] = dataset.get(k) or ""                          # registry datasets for every later step
+        for k in ("url", "license", "license_evidence", "citation"):
+            dataset[k] = dataset.get(k) or ""
         provenance = data.get("provenance") or {}
 
         feed_vars, var_msgs = _feed_variables(fid, data, mapping, ns)
@@ -266,14 +247,11 @@ def load(config_dir=None, include_disabled=()):
                     fetch=fetch, mapping=mapping, variables=sorted(feed_vars),
                     max_row_drop_share=float(data.get("max_row_drop_share",
                                                       instance["validation"]["max_row_drop_share"])),
-                    allow_future=bool(data.get("allow_future", False)),
-                    # licence not confirmed yet (never guessed): load the data, withhold the Croissant JSON-LD
-                    license_pending=not dataset.get("license") and data.get("unlicensed") == "load_without_croissant")
+                    allow_future=bool(data.get("allow_future", False)))
         feed.dataset_dcid = dataset.get("dcid") or f"{ns}Dataset_{fid}"
         feed.provenance_dcid = f"{ns}Prov_{fid}"
         feeds[fid] = feed
 
-    # Two feeds may share a Dataset only if they describe it identically.
     by_dataset = {}
     for f in feeds.values():
         by_dataset.setdefault(f.dataset_dcid, []).append(f)
@@ -295,7 +273,6 @@ def _var_signature(v):
 
 
 def _feed_variables(fid, data, mapping, ns):
-    """Variables defined in the feed and used by its mapping."""
     msgs, out = [], {}
     defs = data.get("variables") or {}
     used = set()

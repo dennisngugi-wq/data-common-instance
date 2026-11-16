@@ -1,9 +1,3 @@
-"""Offline tests: every fetch type and layout, validation rules, publishing safety, local-loader merge.
-
-  docker compose run --rm pipeline python -m unittest discover -s automation/tests -v
-  (or, with PyYAML + openpyxl installed: python3 -m unittest discover -s automation/tests -v)
-"""
-
 import io
 import json
 import os
@@ -17,17 +11,17 @@ from unittest import mock
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
-os.environ["DC_API_KEY"] = ""          # never call the Data Commons API from tests
-os.environ["KNOWLEDGE_DIR"] = tempfile.mkdtemp()   # never write to the real knowledge base
+os.environ["DC_API_KEY"] = ""
+os.environ["KNOWLEDGE_DIR"] = tempfile.mkdtemp()
 
-import build_dcp            # noqa: E402
-import build_local_dc       # noqa: E402
-import croissant            # noqa: E402
-import fetch                # noqa: E402
-import normalize            # noqa: E402
-import registry             # noqa: E402
-import run_pipeline         # noqa: E402
-from places import PlaceResolver  # noqa: E402
+import build_dcp
+import build_local_dc
+import croissant
+import fetch
+import normalize
+import registry
+import run_pipeline
+from places import PlaceResolver
 
 INSTANCE = """
 name: "Test Commons"
@@ -112,7 +106,7 @@ class TestLayouts(ConfigCase):
         self.assertEqual(res.errors, [])
         self.assertEqual([(o["place"], o["date"], o["value"]) for o in res.observations],
                          [("country/KEN", "2022", 54000000.0), ("country/KEN", "2023", 55100000.0)])
-        self.assertTrue(any("variables_map" in w for w in res.warnings))   # "Something else" reported
+        self.assertTrue(any("variables_map" in w for w in res.warnings))
 
     def test_google_sheet_not_public_is_rejected(self):
         page = b"<!DOCTYPE html><html><body>Sign in</body></html>"
@@ -131,7 +125,7 @@ class TestLayouts(ConfigCase):
         ws.append(["Kenya", 53.0, 54.1])
         ws.append(["Ethiopia", 117.2, None])
         ws.append([])
-        ws.append(["Source: test office"])           # note below the table must be ignored
+        ws.append(["Source: test office"])
         buf = io.BytesIO()
         wb.save(buf)
         (self.tmp / "data").mkdir()
@@ -266,11 +260,9 @@ class TestPublishAndMerge(ConfigCase):
             csv_path = store / "ingestion/input/a/a.csv"
             first = csv_path.read_text()
             self.assertIn("dcid:TestDC_pop,dcid:country/KEN,2009,2009,", first)
-            # same data again: nothing republished
             self.assertEqual(run_pipeline.main(args), 0)
             report = json.loads((work / "validation_summary.json").read_text())
             self.assertEqual(report["published_now"], [])
-            # the sheet is emptied by mistake: rejected (E9), the published version stays
             (self.tmp / "data" / "a.csv").write_text("iso3,year,pop\nKEN,2000,2000\n")
             self.assertEqual(run_pipeline.main(args), 1)
             self.assertEqual(csv_path.read_text(), first)
@@ -288,7 +280,24 @@ class TestPublishAndMerge(ConfigCase):
         self.assertNotIn("ddd:", schema)
         config = json.loads((out / "config.json").read_text())
         self.assertEqual(config["inputFiles"]["a.csv"]["provenance"], "Prov A")
-        self.assertEqual(build_local_dc.build(store, out, reg)[0], [])   # UNCHANGED the second time
+        self.assertEqual(build_local_dc.build(store, out, reg)[0], [])
+
+    def test_dataset_topic_groups_variables_by_unit(self):
+        self.feed("t", """
+            fetch: {type: csv, url: "https://e.org/x.csv"}
+            mapping: {place: {column: p}, date: {column: d}, values: {a: a, b: b, c: c}}
+            variables:
+              a: {name: "A", description: "a", group: "G", population_type: Person, measured_property: count}
+              b: {name: "B", description: "b", group: "G", population_type: Person, measured_property: count}
+              c: {name: "C", description: "c", group: "G", population_type: Person, measured_property: count}
+            """)
+        reg = self.load()
+        schema = build_dcp.Writer(reg).schema_mcf()
+        self.assertIn("Node: ddd:TestDCTopic_t\ntypeOf: dcid:Topic\nname: \"Test dataset\"", schema)
+        self.assertIn("relevantVariable: dcid:TestDCPeerGroup_t_1", schema)
+        self.assertIn("typeOf: dcid:StatVarPeerGroup", schema)
+        for v in ("a", "b", "c"):
+            self.assertIn(f"member: dcid:TestDC_{v}", schema)
 
     def test_provenance_ids_follow_loader_order(self):
         (self.tmp / "config" / "sources.yaml").write_text(SOURCES + """
@@ -305,7 +314,6 @@ Other:
             path.write_text(path.read_text().replace("source: Org", f"source: {src}"))
         reg = self.load()
         sources, ids = build_local_dc.provenance_ids(reg, list(reg.feeds))
-        # sources in order of first appearance (feeds sorted by id), then their provenances
         self.assertEqual(list(sources), ["Another Org", "Test Statistics Office"])
         self.assertEqual(ids, {"P b_other": "c/p/1", "P c_first_again": "c/p/2", "P z_first_source": "c/p/3"})
 

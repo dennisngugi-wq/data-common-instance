@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-"""Write site/config/home_page/sample_questions.json from the datasets that are live, so the datacommons.org
-homepage (and the animated hint in the search bar) only suggests questions this instance can answer.
-
-One category per source (up to 6), three questions each: "<variable or dataset> in <a place it has data for>".
-Prints CHANGED / UNCHANGED. The website reads the file at start-up (the scheduler restarts it after a load).
-"""
-
 import argparse
 import csv
 import io
 import json
+import re
 import sys
+import unicodedata
 from pathlib import Path
+from urllib.parse import quote
 
+import croissant
 import registry as registry_mod
 import registries
+import runlog
 import settings
 from storage import LocalStore
 
@@ -30,9 +28,9 @@ def questions(store_dir):
     by_source = {}
     for fid in sorted(reg.feeds):
         text = store.read_text(f"{settings.DCP_INPUT_ROOT}/{fid}/{fid}.csv")
-        if not text:
+        if not text or not croissant.publishable(reg.feeds[fid], reg):
             continue
-        places = {r["entity"][5:] for r in csv.DictReader(io.StringIO(text))}
+        places ={r["entity"][5:] for r in csv.DictReader(io.StringIO(text))}
         place = next((p for p in PREFERRED if p in places), sorted(places)[0] if places else None)
         if not place:
             continue
@@ -49,18 +47,61 @@ def questions(store_dir):
     return out[:6]
 
 
-def main(argv=None):
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--store-dir", default=str(settings.PROJECT_ROOT / "local_store"))
-    p.add_argument("--out", default=str(settings.PROJECT_ROOT / "site" / "config" / "home_page" / "sample_questions.json"))
-    a = p.parse_args(argv)
-    text = json.dumps(questions(a.store_dir), indent=2, ensure_ascii=False) + "\n"
-    out = Path(a.out)
+TOPICS = [
+    ("population", "Population & census", "family_restroom", ["population", "census"]),
+    ("labour", "Jobs & income", "work", ["labour", "employ", "income", "wage"]),
+    ("prices", "Prices & inflation", "sell", ["price", "inflation", "consumerprice"]),
+    ("economy", "GDP & national accounts", "account_balance", ["nationalaccounts", "gdp", "grossdomestic"]),
+    ("agriculture", "Agriculture & industry", "agriculture", ["agricultur", "crop", "livestock", "cattle",
+                                                              "industrial", "manufactur"]),
+    ("health", "Health & vital statistics", "health_and_safety", ["health", "ebola", "birth", "death", "vital"]),
+    ("trade-migration", "Trade & migration", "swap_horiz", ["trade", "migra", "export", "import"]),
+    ("environment", "Environment & climate", "eco", ["co2", "emission", "climate"]),
+]
+
+
+def _norm(s):
+    s = unicodedata.normalize("NFD", str(s or "")).lower()
+    return re.sub(r"[^a-z0-9]+", "", "".join(c for c in s if unicodedata.category(c) != "Mn"))
+
+
+def topics(catalog_path):
+    try:
+        catalog = json.loads(Path(catalog_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    texts = [_norm(d.get("name", "") + " " + d.get("description", ""))
+             for s in catalog.get("sources", []) for d in s.get("datasets", [])]
+    out = []
+    for tid, title, icon, terms in TOPICS:
+        n = sum(1 for t in texts if any(term in t for term in terms))
+        if n:
+            url = "/data?topic=" + quote(title) + "&terms=" + quote("|".join(terms))
+            out.append({"id": tid, "title": title, "description": f"{n} dataset{'s' if n != 1 else ''}",
+                        "url": url, "browseUrl": url, "icon": icon})
+    return out
+
+
+def _write(path, obj):
+    text = json.dumps(obj, indent=2, ensure_ascii=False) + "\n"
+    out = Path(path)
     changed = not out.exists() or out.read_text(encoding="utf-8") != text
     if changed:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
-    print(f"homepage questions -> {out} ({'CHANGED' if changed else 'UNCHANGED'})")
+    print(runlog.item(f"Homepage {out.stem.replace('_', ' ')}", "changed" if changed else "unchanged"))
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser()
+    p.add_argument("--store-dir", default=str(settings.PROJECT_ROOT / "local_store"))
+    home = settings.PROJECT_ROOT / "site" / "config" / "home_page"
+    p.add_argument("--out", default=str(home / "sample_questions.json"))
+    p.add_argument("--topics-out", default=str(home / "topics.json"))
+    p.add_argument("--catalog", default=str(settings.PROJECT_ROOT / "site" / "static" / "catalog.json"))
+    a = p.parse_args(argv)
+    _write(a.out, questions(a.store_dir))
+    _write(a.topics_out, topics(a.catalog))
     return 0
 
 

@@ -1,15 +1,3 @@
-"""Keep the project knowledge base (<Datacommon>/mcp agent/knowledge, or KNOWLEDGE_DIR) in step with the data.
-
-After every publishing run:
-  sources/datacommon-project-catalog.md   regenerated: every dataset live on the instance with its Croissant
-                                          metadata (source/creator, licence or PENDING, landing page, data link,
-                                          variables, places, dates, last refresh), registries and their tabs
-  CHANGELOG.md                            a dated line when datasets are added, removed or their data changes
-  INDEX.md                                one line pointing at the catalogue (added once)
-Files are written only when their content changes. Nothing secret is written (no keys, no env values).
-The folder is mounted into the pipeline container at /knowledge (KNOWLEDGE_DIR); absent -> skipped.
-"""
-
 import datetime as dt
 import json
 import logging
@@ -121,5 +109,5 @@ def update(reg, state, store, report, live):
                 text += f"\n\n## {today}"
             log.write_text(text + "\n" + entry + "\n", encoding="utf-8")
             store.write_text(SNAPSHOT_KEY, json.dumps(now, indent=1, sort_keys=True) + "\n")
-    except Exception:  # the knowledge base must never break a data run
+    except Exception:
         logging.exception("knowledge base update failed")

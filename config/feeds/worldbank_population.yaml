@@ -1,10 +1,7 @@
-# Starter feed 2: a JSON data API (World Bank Indicators API, no key needed).
-
 enabled: true
 source: WorldBank
 
 dataset:
-  # Reuses the Dataset node base Data Commons already has for WDI (as africa-dcp does).
   dcid: "dc/d/WorldBank_WorldDevelopmentIndicators"
   name: "World Development Indicators"
   description: >-
@@ -26,14 +23,13 @@ provenance:
 fetch:
   type: json
   url: "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=20000&date=1960:2100"
-  records: "1"                     # the API returns [paging info, rows]: rows are element 1
+  records: "1"
 
 mapping:
   place: {column: countryiso3code, match: iso3}
   date: {column: date}
   values:
     value: population_total
-  # The World Bank also returns regional and income aggregates (AFE, LMC, ...): leave them out.
   unresolved_places: skip
 
 variables:
@@ -44,6 +40,6 @@ variables:
       (World Bank series SP.POP.TOTL).
     group: "Demographics"
     population_type: Person
-    measured_property: count       # a plain count of people: no unit
+    measured_property: count
     min: 0
     max: 10000000000

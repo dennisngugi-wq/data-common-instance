@@ -1,5 +1,3 @@
-"""Registries (all tabs mirrored, rows -> datasets), source aliases, JSON-stat mapping, no-conflict rule (V12)."""
-
 import io
 import json
 import os
@@ -12,14 +10,15 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 os.environ["DC_API_KEY"] = ""
-os.environ["KNOWLEDGE_DIR"] = tempfile.mkdtemp()   # never write to the real knowledge base
+os.environ["KNOWLEDGE_DIR"] = tempfile.mkdtemp()
 
-import build_dcp     # noqa: E402
-import jsonstat      # noqa: E402
-import registries    # noqa: E402
-import registry      # noqa: E402
-from places import PlaceResolver  # noqa: E402
-from storage import LocalStore    # noqa: E402
+import build_dcp
+import croissant
+import jsonstat
+import registries
+import registry
+from places import PlaceResolver
+from storage import LocalStore
 
 SOURCES = """
 ZIMSTAT:
@@ -55,7 +54,6 @@ def workbook(rows):
 
 
 def cube():
-    """Monthly + quarterly arrivals, provinces + a foreign country + national."""
     return {"class": "dataset", "label": "Arrivals", "id": ["REF_AREA", "UNIT_MEASURE", "TIME_PERIOD"],
             "size": [3, 1, 2], "role": {"geo": ["REF_AREA"], "time": ["TIME_PERIOD"]},
             "dimension": {
@@ -76,7 +74,7 @@ class Base(unittest.TestCase):
         (cfg / "sources.yaml").write_text(SOURCES)
         (cfg / "places.yaml").write_text("aliases: {}\n")
         (cfg / "registries" / "zim.yaml").write_text(
-            "enabled: true\nsheet: {path: data/wb.xlsx}\ndatasets_tab: Extracted\nunlicensed: load_without_croissant\n"
+            "enabled: true\nsheet: {path: data/wb.xlsx}\ndatasets_tab: Extracted\n"
             "allow_future: true\ndata: {type: jsonstat, method: POST, body: []}\n"
             "mapping: {place_codes: '^(ZW|ZW_\\d)$', place_map: {ZW: country/ZWE}, place_within: country/ZWE,"
             " place_types: {'^ZW_\\d$': AdministrativeArea1}}\n")
@@ -115,11 +113,13 @@ class TestRegistry(Base):
         feeds, problems = registries.feeds(cfg, records, self.reg)
         self.assertEqual(sorted(feeds), ["zim_arr", "zim_new"])
         f = feeds["zim_arr"]
-        self.assertEqual(f.source_key, "ZIMSTAT")                     # matched through the alias
+        self.assertEqual(f.source_key, "ZIMSTAT")
         self.assertEqual(f.fetch["url"], "https://api.example/datasets/ZW1,ARR,1.0/data")
-        self.assertTrue(f.license_pending)
-        self.assertEqual(f.dataset["license"], "")                     # never guessed
+        self.assertEqual(f.dataset["license"], "")
         self.assertGreaterEqual(len(f.dataset["description"]), 50)
+        self.assertNotIn("not found", f.dataset["description"].lower())
+        self.assertFalse(croissant.publishable(f, self.reg))
+        self.assertTrue(any(e.startswith("C4 no licence URL") for e in croissant.check_feed(f, self.reg)[0]))
 
     def test_unreachable_sheet_uses_last_copy(self):
         (self.tmp / "data" / "wb.xlsx").write_bytes(workbook([self.ROW]))
@@ -143,7 +143,7 @@ class TestJsonStat(Base):
         self.assertEqual(got, {("P1M", "country/ZWE", "2023-01", "P1M", 10.0), ("P3M", "country/ZWE", "2023-01", "P3M", 30.0),
                                ("P1M", "wikidataId/Q24045859", "2023-01", "P1M", 1.0),
                                ("P3M", "wikidataId/Q24045859", "2023-01", "P3M", 3.0)})
-        self.assertTrue(any("454 Malawi" in n for n in res.notes))      # not an area of the publisher
+        self.assertTrue(any("454 Malawi" in n for n in res.notes))
         units = {v.unit for v in res.variables.values()}
         self.assertEqual(units, {"TDCUnit_PS"})
         self.assertTrue(all("quarterly" in v.name or "monthly" in v.name for v in res.variables.values()))
@@ -180,13 +180,17 @@ if __name__ == "__main__":
 class TestMergeIncludesRegistryDatasets(Base):
     def test_published_registry_dataset_reaches_loader_input(self):
         import build_local_dc
-        (self.tmp / "data" / "wb.xlsx").write_bytes(workbook([TestRegistry.ROW]))
+        licensed = TestRegistry.ROW[:6] + ["https://creativecommons.org/licenses/by/4.0/", "CC BY 4.0", "Migration"]
+        unlicensed = ["ZW1,NOLIC,1.0"] + TestRegistry.ROW[1:]
+        (self.tmp / "data" / "wb.xlsx").write_bytes(workbook([licensed, unlicensed]))
         cfg = registries.load_configs(self.tmp / "config", {})["zim"]
         registries.sync(cfg, self.store, "s")
         self.store.write_text("ingestion/input/tdc_schema/schema.mcf", "Node: ddd:TDCGroup_Root\ntypeOf: dcid:StatVarGroup\n")
-        self.store.write_text("ingestion/input/zim_arr/zim_arr.csv",
-                              "variable,entity,date,value,unit,period\ndcid:TDC_x,dcid:country/ZWE,2023-01,10,,P1M\n")
+        for fid in ("zim_arr", "zim_nolic"):
+            self.store.write_text(f"ingestion/input/{fid}/{fid}.csv",
+                                  "variable,entity,date,value,unit,period\ndcid:TDC_x,dcid:country/ZWE,2023-01,10,,P1M\n")
         with mock.patch("settings.CONFIG_DIR", self.tmp / "config"):
             changed, rows, live = build_local_dc.build(self.tmp / "store", self.tmp / "local_dc")
         self.assertEqual(live, ["zim_arr"])
         self.assertIn("country/ZWE,TDC_x,2023-01,10,,P1M", (self.tmp / "local_dc" / "zim_arr.csv").read_text())
+        self.assertFalse((self.tmp / "local_dc" / "zim_nolic.csv").exists())

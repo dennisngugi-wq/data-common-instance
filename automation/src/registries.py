@@ -1,17 +1,3 @@
-"""Dataset registries: a Google Sheet (or .xlsx) where each row describes one dataset with Croissant-style
-columns (name, description, source organisation, landing page, data link, licence, ...), e.g. the team's
-ZIMSTAT sheet. config/registries/<id>.yaml says where the sheet is, which tab lists the datasets and which
-column holds which field.
-
-Every run (`sync`):
-  1. download the WHOLE workbook (all tabs: the .xlsx export of the sheet), keep it as it is:
-       <store>/registries/<id>/workbook.xlsx, tabs/<tab>.csv (every tab, every column), rows.json
-  2. compare with the previous copy and log datasets added / removed / changed: registries/<id>/changes/<stamp>.json
-  3. if the sheet cannot be downloaded, keep using the last copy (the run report says so)
-Then `feeds()` turns every dataset row into a Feed (id <registry id>_<dataset id slug>) with its own Dataset and
-Provenance, so a new row in the sheet becomes a new dataset on the site the next night, with no code change.
-"""
-
 import csv
 import datetime as dt
 import hashlib
@@ -28,6 +14,7 @@ import settings
 from registry import Feed, KEY, slug
 
 URL_IN_TEXT = re.compile(r"https?://[^\s\"'<>)]+")
+UNKNOWN = {"", "not found", "n/a", "na", "none", "unknown", "-", "--", "tbd", "not available"}
 DEFAULT_COLUMNS = {
     "id": "Dataset ID", "name": "Dataset Name", "description": "Description", "organisation": "Source Organization",
     "url": "Source URL", "provenance_url": "Provenance URL", "content_url": "Source file link",
@@ -37,15 +24,28 @@ DEFAULT_COLUMNS = {
 }
 
 
+def _known(value):
+    return " ".join(str(value or "").split()).lower() not in UNKNOWN
+
+
 def load_configs(config_dir, problems):
+    import sheets
+    listed = sheets.overrides(config_dir, "registry")
     out = {}
-    for path in sorted((Path(config_dir) / "registries").glob("*.yaml")):
-        rid = path.stem
+    paths = {p.stem: p for p in sorted((Path(config_dir) / "registries").glob("*.yaml"))}
+    for rid in sorted(set(listed) - set(paths)):
+        if listed[rid]["enabled"]:
+            problems.setdefault(f"registry:{rid}", []).append(
+                f"sheets.json lists {rid!r} as a registry, but config/registries/{rid}.yaml (how to read it) is missing")
+    for rid, path in paths.items():
         try:
             cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as exc:
             problems.setdefault(f"registry:{rid}", []).append(f"cannot read {path.name}: {exc}")
             continue
+        if rid in listed:
+            cfg["enabled"] = listed[rid]["enabled"]
+            cfg["sheet"] = listed[rid]["spec"]
         if not cfg.get("enabled", False):
             continue
         if not re.match(r"^[a-z0-9][a-z0-9_]{0,30}$", rid):
@@ -59,6 +59,9 @@ def load_configs(config_dir, problems):
 
 def _workbook_bytes(cfg):
     sheet = cfg.get("sheet") or {}
+    if sheet.get("published_id"):
+        import sheets
+        return sheets.workbook_bytes(sheet)
     if sheet.get("sheet_id"):
         url = f"https://docs.google.com/spreadsheets/d/{sheet['sheet_id']}/export?format=xlsx"
         data, media, _ = fetch_mod.http_get(url)
@@ -110,8 +113,15 @@ def _records(tabs, cfg):
     return out
 
 
+def saved_at(store, key):
+    root = getattr(store, "root", None)
+    path = Path(root) / key if root else None
+    if path is None or not path.exists():
+        return None
+    return dt.datetime.fromtimestamp(path.stat().st_mtime, dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
 def sync(cfg, store, stamp):
-    """Mirror every tab; returns (records by dataset id, report dict)."""
     rid, base = cfg["id"], f"registries/{cfg['id']}"
     report = {"registry": rid, "status": "OK"}
     previous = json.loads(store.read_text(f"{base}/rows.json") or "{}")
@@ -119,8 +129,9 @@ def sync(cfg, store, stamp):
         data, url = _workbook_bytes(cfg)
         tabs = _tabs(data)
         records = _records(tabs, cfg)
-    except Exception as exc:  # unreachable sheet or changed layout: use the last good copy
-        report.update(status="USING LAST COPY" if previous else "FAILED", error=str(exc)[:400])
+    except Exception as exc:
+        report.update(status="USING LAST COPY" if previous else "FAILED", error=str(exc)[:400],
+                      last_copy_from=saved_at(store, f"{base}/sha256.txt"))
         logging.error("registry %s: %s", rid, exc)
         return previous, report
     sha = hashlib.sha256(json.dumps(tabs, sort_keys=True).encode()).hexdigest()
@@ -155,8 +166,6 @@ def _first_url(text):
 
 
 def feeds(cfg, records, reg):
-    """Dataset rows -> Feeds (and problems per row). Source = the row's organisation, matched to
-    config/sources.yaml by name or alias; unknown organisations are reported, not invented."""
     c, out, problems = cfg["columns"], {}, {}
     for rec_id, rec in sorted(records.items()):
         flow = rec_id.split(",")[1] if rec_id.count(",") == 2 else rec_id
@@ -182,7 +191,8 @@ def feeds(cfg, records, reg):
                  + (f" ({rec.get(c['domain'])} / {sub})" if rec.get(c["domain"]) else "")
                  + f" as dataset {rec_id}.",
                  (f"Coverage {rec.get(c['min_date'])} to {rec.get(c['max_date'])}." if rec.get(c["min_date"]) else ""),
-                 (f"Updated {rec.get(c['update_frequency']).lower()}." if rec.get(c["update_frequency"]) else "")]
+                 (f"Updated {rec.get(c['update_frequency']).lower()}." if _known(rec.get(c["update_frequency"]))
+                  else "")]
         if msgs:
             problems[fid] = msgs
             continue
@@ -197,7 +207,6 @@ def feeds(cfg, records, reg):
                     max_row_drop_share=float(cfg.get("max_row_drop_share",
                                                      reg.instance["validation"]["max_row_drop_share"])),
                     allow_future=bool(cfg.get("allow_future", False)), dynamic=True,
-                    license_pending=not lic_url and cfg.get("unlicensed") == "load_without_croissant",
                     registry=cfg["id"], meta={**rec, "_flow": flow, "_flow_full": rec_id})
         feed.dataset_dcid = f"{reg.ns}Dataset_{slug(cfg['id'])}_{slug(flow)}"
         feed.provenance_dcid = f"{reg.ns}Prov_{fid}"
@@ -206,8 +215,13 @@ def feeds(cfg, records, reg):
 
 
 def add_stored_feeds(reg, store, config_dir=None):
-    """Add every registry dataset (from the last mirrored copy of its sheet) to reg.feeds, with the variables the
-    last successful run discovered. Used by every step after the per-dataset runs (merge, catalogue, homepage)."""
+    import sheets
+    _add_registry_feeds(reg, store, config_dir)
+    sheets.add_feeds(reg, store, config_dir)
+    return reg
+
+
+def _add_registry_feeds(reg, store, config_dir=None):
     for rid, cfg in load_configs(config_dir or settings.CONFIG_DIR, reg.problems).items():
         for fid, feed in feeds(cfg, stored_records(cfg, store), reg)[0].items():
             reg.feeds.setdefault(fid, feed)

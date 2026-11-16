@@ -1,65 +1,39 @@
-# DataCommon Project: a local Custom Data Commons that pulls its feeds every night, validates them, and serves them
-# with the stock Data Commons website.
-#
-#   bash scripts/start.sh               first start and after every reboot (builds, loads, starts the site)
-#   docker compose logs -f scheduler    follow a refresh
-#   open http://localhost:8090
-#
-# Needs env.list (copy env.list.example: DC_API_KEY) and .env (copy .env.example: HOST_PROJECT_DIR).
-# Bind mounts use HOST_PROJECT_DIR so the scheduler, which drives Docker from inside a container, mounts the same
-# host folders as you do.
-#
-# Folders (all under the project, git-ignored):
-#   local_store/        validated, published DCP imports, state, backups, run reports (layout of the GCS bucket)
-#   local_dc/           merged input for the local loader
-#   local_dc_db/        live database the website serves
-#   local_dc_db_next/   tonight's load; swapped in only after "Runner finished successfully"
-#   local_dc_db_prev/   previous database, kept for rollback
-#
-# Images: datacommons-data/-services :stable (SQLite); 1.1.7+ needs Spanner and cannot serve a local folder.
-
 name: dcproject
 
 x-dc-env: &dc-env
   env_file:
     - path: env.list
-      required: false   # the scheduler checks DC_API_KEY and says what is missing
+      required: false
   platform: linux/amd64
 
 services:
-  # Stock Data Commons website (Mixer + website + NL search) serving local_dc_db/.
   website:
     <<: *dc-env
     image: gcr.io/datcom-ci/datacommons-services:stable
     environment:
       INPUT_DIR: /data
       OUTPUT_DIR: /out
-      USE_SQLITE: "true"               # without it the site ignores the local database
-      DISABLE_GOOGLE_MAPS: ${DISABLE_GOOGLE_MAPS:-true}   # "false" once env.list has a real Google Maps key
-      SITE_URL: ${SITE_URL:-}          # overrides site_url in config/instance.yaml (Croissant url/publisher)
+      USE_SQLITE: "true"
+      DISABLE_GOOGLE_MAPS: ${DISABLE_GOOGLE_MAPS:-true}
+      SITE_URL: ${SITE_URL:-}
     volumes:
       - ${HOST_PROJECT_DIR:?set HOST_PROJECT_DIR in .env}/local_dc:/data:ro
       - ${HOST_PROJECT_DIR}/local_dc_db:/out
-      # Customization through the official extension points (site/README.md)
       - ${HOST_PROJECT_DIR}/site/app_env/custom.py:/workspace/server/app_env/custom.py:ro
       - ${HOST_PROJECT_DIR}/site/templates:/workspace/server/templates/custom_dc/custom:ro
       - ${HOST_PROJECT_DIR}/site/static:/workspace/server/dist/custom_dc/custom:ro
+      - ${HOST_PROJECT_DIR}/site/data:/workspace/custom_data:ro
       - ${HOST_PROJECT_DIR}/config/instance.yaml:/workspace/instance.yaml:ro
-      # datacommons.org homepage content: our sample questions (generated from the live data) and no partner logos
       - ${HOST_PROJECT_DIR}/site/config/home_page/sample_questions.json:/workspace/server/config/home_page/sample_questions.json:ro
       - ${HOST_PROJECT_DIR}/site/config/home_page/partners.json:/workspace/server/config/home_page/partners.json:ro
-      # Feature flags: the image's custom.json with search suggestions on (autocomplete, enable_stat_var_autocomplete),
-      # answered from this instance's places and variables by app_env/custom.py
+      - ${HOST_PROJECT_DIR}/site/config/home_page/topics.json:/workspace/server/config/home_page/topics.json:ro
       - ${HOST_PROJECT_DIR}/site/config/feature_flags/custom.json:/workspace/server/config/feature_flag_configs/custom.json:ro
-      # Header menu: stock Tools menu + "Explore by place" (/drilldown) and "Data sources" (/data)
       - ${HOST_PROJECT_DIR}/site/config/header.json:/workspace/server/config/custom_dc/custom/base/header.json:ro
     ports:
       - "${SITE_PORT:-8090}:8080"
     restart: unless-stopped
-    profiles: ["site"]   # started by the scheduler once a database exists
+    profiles: ["site"]
 
-  # Daily at REFRESH_AT_UTC (21:00 UTC = 00:00 Africa/Nairobi), at start-up, and on demand (scripts/refresh-now.sh):
-  # pipeline -> merge -> load -> swap -> restart website.
   scheduler:
     image: docker:27-cli
     working_dir: /project
@@ -69,23 +43,19 @@ services:
       REFRESH_ON_START: ${REFRESH_ON_START:-true}
       HOST_UID: ${HOST_UID:-1000}
       HOST_GID: ${HOST_GID:-1000}
+      PATH: /project/docker/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_PROJECT_DIR}:/project
     command: ["sh", "/project/docker/scheduler.sh"]
     restart: unless-stopped
 
-  # ---- one-shot jobs, run by the scheduler (or by hand: docker compose run --rm pipeline)
-
-  # Fetch every enabled feed in config/feeds/, validate, publish to local_store/, merge into local_dc/,
-  # refresh the site's place index. Exit 0 = all feeds fine, 1 = some feed rejected (others still published),
-  # 2 = nothing could be merged.
   pipeline:
     <<: *dc-env
     build: ./automation
     image: dcproject-pipeline:latest
     profiles: ["jobs"]
-    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"   # files stay owned by you, not root
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     working_dir: /project
     environment:
       PYTHONUNBUFFERED: "1"
@@ -93,8 +63,6 @@ services:
       KNOWLEDGE_DIR: /knowledge
     volumes:
       - ${HOST_PROJECT_DIR}:/project
-      # Knowledge base kept in step with the data (automation/src/knowledge.py); scripts/start.sh points
-      # KNOWLEDGE_HOST_DIR at work/knowledge when the default folder does not exist.
       - type: bind
         source: ${KNOWLEDGE_HOST_DIR:-${HOST_PROJECT_DIR}/../../mcp agent/knowledge}
         target: /knowledge
@@ -108,7 +76,6 @@ services:
         python automation/src/build_place_index.py
         exit $$rc
 
-  # Official Data Commons loader: local_dc/ -> local_dc_db_next/datacommons/datacommons.db
   loader:
     <<: *dc-env
     image: gcr.io/datcom-ci/datacommons-data:stable

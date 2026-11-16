@@ -5646,6 +5646,30 @@
 "parent": "World › Africa › Eastern Africa › Zimbabwe › Manicaland Province"
 },
 {
+"dcid": "wikidataId/Q16798851",
+"name": "Chipinge District",
+"type": "AdministrativeArea2",
+"alt": [
+"Chipinge Urban"
+],
+"path": [
+"World",
+"Africa",
+"Eastern Africa",
+"Zimbabwe",
+"Manicaland Province"
+],
+"up": [
+"Earth",
+"africa",
+"EasternAfrica",
+"country/ZWE",
+"wikidataId/Q465847"
+],
+"level": 5,
+"parent": "World › Africa › Eastern Africa › Zimbabwe › Manicaland Province"
+},
+{
 "dcid": "wikidataId/Q1783697",
 "name": "Makoni District",
 "type": "AdministrativeArea2",
@@ -5714,6 +5738,30 @@
 ],
 "level": 5,
 "parent": "World › Africa › Eastern Africa › Zimbabwe › Manicaland Province"
+},
+{
+"dcid": "wikidataId/Q1709315",
+"name": "Bindura District",
+"type": "AdministrativeArea2",
+"alt": [
+"Bindura Urban"
+],
+"path": [
+"World",
+"Africa",
+"Eastern Africa",
+"Zimbabwe",
+"Mashonaland Central Province"
+],
+"up": [
+"Earth",
+"africa",
+"EasternAfrica",
+"country/ZWE",
+"wikidataId/Q596156"
+],
+"level": 5,
+"parent": "World › Africa › Eastern Africa › Zimbabwe › Mashonaland Central Province"
 },
 {
 "dcid": "wikidataId/Q1708967",
@@ -5958,6 +6006,28 @@
 "alt": [
 "Makonde"
 ],
+"path": [
+"World",
+"Africa",
+"Eastern Africa",
+"Zimbabwe",
+"Mashonaland West Province"
+],
+"up": [
+"Earth",
+"africa",
+"EasternAfrica",
+"country/ZWE",
+"wikidataId/Q457189"
+],
+"level": 5,
+"parent": "World › Africa › Eastern Africa › Zimbabwe › Mashonaland West Province"
+},
+{
+"dcid": "wikidataId/Q994406",
+"name": "Norton",
+"type": "AdministrativeArea2",
+"alt": [],
 "path": [
 "World",
 "Africa",

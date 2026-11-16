@@ -1,9 +1,3 @@
-"""Where published imports, state, backups and reports live.
-
-LocalStore is a folder laid out like the GCS bucket of a DCP deployment (ingestion/input/<import>/...), so the
-local run exercises the same paths a Cloud Run job would. GcsStore is used once the GCP resources exist.
-"""
-
 import shutil
 from pathlib import Path
 
@@ -40,7 +34,7 @@ class LocalStore:
 
 class GcsStore:
     def __init__(self, bucket_name, project_id):
-        from google.cloud import storage  # only needed in GCP mode
+        from google.cloud import storage
 
         self.bucket_name = bucket_name
         self.bucket = storage.Client(project=project_id).bucket(bucket_name)

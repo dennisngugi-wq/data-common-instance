@@ -1,18 +1,3 @@
-"""Croissant 1.1 readiness: check each feed's metadata and preview the JSON-LD the website will publish.
-
-Rules (knowledge/sources/croissant-dc-integration.md and upstream website server/lib/croissant_metadata.py):
-  - Dataset: name; description 50-5000 characters; url (canonical landing page, absolute https/http);
-    license = a licence URL (never inferred: license_evidence must say where it is stated)
-  - creator = the Source: name + url
-  - datePublished = latest lastDataRefreshDate of the dataset's provenances (set by the pipeline)
-  - Provenance: provenanceCategory StatisticsProvenance, isPartOf the Dataset, licence
-  - contentUrl/downloadUrl only for a real file (instance.public_data_url), never a landing page
-A feed failing these rules is not published (rule C1..C6 in the run report).
-
-The preview (work/croissant/<dataset>.json) mirrors what the site builds from the knowledge graph on
-/browser/<dataset dcid>, so it can be checked with mlcroissant or the Rich Results Test before the site is up.
-"""
-
 import re
 
 CONFORMS_TO = "http://mlcommons.org/croissant/1.1"
@@ -34,12 +19,10 @@ def check_feed(feed, registry):
     elif LANDING_HINT.search(url):
         warnings.append("dataset.url looks like a file download; it should be the human-readable landing page")
     lic = str(ds.get("license", ""))
-    if not lic and getattr(feed, "license_pending", False):
-        warnings.append("C4 PENDING: no licence URL for this dataset (never guessed). The data is loaded, but no "
-                        "Croissant JSON-LD is published for it until the publisher's licence URL is recorded.")
-    elif not re.match(r"^https?://\S+$", lic):
-        errors.append("C4 dataset.license must be the URL of the licence (e.g. "
-                      "https://creativecommons.org/licenses/by/4.0/); never guess it")
+    if not re.match(r"^https?://\S+$", lic):
+        errors.append("C4 no licence URL: the dataset is not loaded until the publisher's licence URL (e.g. "
+                      "https://creativecommons.org/licenses/by/4.0/) and where it is stated are recorded; "
+                      "never guess it")
     elif not ds.get("license_evidence"):
         errors.append("C4 dataset.license_evidence is required: where the publisher states this licence")
     elif not any(h in lic for h in LICENSE_HOSTS):
@@ -52,14 +35,17 @@ def check_feed(feed, registry):
     return errors, warnings
 
 
+def publishable(feed, registry):
+    return not check_feed(feed, registry)[0]
+
+
 def preview(registry, feeds, refresh_by_feed):
-    """{dataset dcid: JSON-LD} as the site would emit it (base + extended when a public download exists)."""
     out = {}
     inst = registry.instance
     site = inst["site_url"].rstrip("/")
     by_ds = {}
     for f in feeds:
-        if f.dataset.get("license"):     # no licence -> no payload (upstream validation drops it too)
+        if f.dataset.get("license"):
             by_ds.setdefault(f.dataset_dcid, []).append(f)
     for dcid, fs in sorted(by_ds.items()):
         f0 = fs[0]

@@ -1,10 +1,3 @@
-# TEMPLATE: an Excel workbook, downloaded from a website (url) or dropped into data/inbox/ (path).
-# Copy to config/feeds/<feed_id>.yaml and set enabled: true. Only .xlsx/.xlsm (not the old .xls: save it as .xlsx).
-#
-# Wide layout with years as columns, typical of statistics-office tables, e.g.
-#   County   | 2019 | 2020 | 2021
-#   Nairobi  | 4.39 | 4.48 | 4.56
-
 enabled: false
 source: MyOrganisation
 
@@ -22,16 +15,15 @@ provenance:
 
 fetch:
   type: excel
-  path: "data/inbox/my_table.xlsx"     # or: url: "https://example.org/files/table.xlsx"
-  sheet: "Table 1"                     # sheet name (default: the first sheet)
-  header_row: 3                        # row with the column names (rows above it are titles, skipped)
+  path: "data/inbox/my_table.xlsx"
+  sheet: "Table 1"
+  header_row: 3
 
 mapping:
   place: {column: County, match: name, type: AdministrativeArea1, within: country/KEN}
-  year_columns: true                   # every column named like a year (2019, 2020, ...) holds values
+  year_columns: true
   variable: population_millions
-  scale: 1000000                       # multiply cell values (here: millions -> people)
-  # stop_at_blank_row: true            # ignore notes below the table (default true for excel)
+  scale: 1000000
 
 variables:
   population_millions:

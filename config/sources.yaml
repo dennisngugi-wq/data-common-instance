@@ -1,16 +1,3 @@
-# Sources = the organisations that publish the data (Data Commons "Source" node = Croissant "creator").
-# One entry per organisation; feeds and registries refer to it by its key.
-#
-#   <key>:                 letters, digits and _ ; used in the dcid <namespace>Source_<key>
-#     name:    official organisation name (required)
-#     url:     official home page, https (required)
-#     short:   optional short name / acronym, shown in provenance names (e.g. KNBS)
-#     aliases: other names and spellings of the SAME organisation. A sheet saying "KNBS", "Kenya Bureau of
-#              Statistics" or "Kenya National Bureau of Statistics" is matched to this one source, and every
-#              name is added to the search text of its variables, so searching any of them finds the data.
-#     dcid:    optional: reuse an existing Data Commons Source instead of creating one (e.g. dc/s/WorldBank).
-#              It is only referenced, never redefined, so this instance can never change base Data Commons.
-
 OWID:
   name: "Our World in Data"
   url: "https://ourworldindata.org/"

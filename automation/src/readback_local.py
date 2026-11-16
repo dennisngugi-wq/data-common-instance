@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""Readback check for the local website (from africa-dcp; as cbk-inflation-datacommons/src/readback.py).
-
-Reads every observation in local_dc/*.csv back through the running website's API
-(http://localhost:8090/core/api/v2/observation) and compares value and unit.
-Prints READBACK PASS and exits 0 only when nothing is missing, different or extra.
-
-Usage:  python3 automation/src/readback_local.py [--url http://localhost:8090]
-"""
-
 import argparse
 import csv
 import json
