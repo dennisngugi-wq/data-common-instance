@@ -1,10 +1,7 @@
-# Starter feed 1: a CSV published on a website (Our World in Data).
-# Listed in the agreed Country x Indicator catalogue (Climate and Environment / CO2 emissions, creator OWID).
-
 enabled: true
-source: OWID                       # key in config/sources.yaml (Croissant creator)
+source: OWID
 
-dataset:                           # Data Commons Dataset node = the Croissant sc:Dataset that gets indexed
+dataset:
   name: "CO2 emissions per capita (Our World in Data)"
   description: >-
     Annual carbon dioxide (CO2) emissions per person from burning fossil fuels and industrial processes
@@ -17,7 +14,6 @@ dataset:                           # Data Commons Dataset node = the Croissant s
     https://ourworldindata.org/faqs#can-i-reuse-or-republish-your-data: data produced by Our World in Data is
     "licensed under CC BY, unless stated otherwise"; the chart's metadata.json states no other licence;
     checked 2026-11-13.
-  # Official citation from the chart's metadata.json (citationShort)
   citation: >-
     Global Carbon Budget (2026); Population based on various sources (2024) - with major processing by
     Our World in Data
@@ -34,10 +30,8 @@ mapping:
   date: {column: year}
   values:
     emissions_total_per_capita: co2_emissions_per_capita
-  # OWID also lists regions and income groups (e.g. "Africa (GCP)") that have no country code: leave them out.
   unresolved_places: skip
-  earliest_year: 1750              # OWID's series starts in 1750 (instance default: 1800)
-  # Reviewed exclusions (never widen a variable's min/max to let a bad value through; list it here with a reason).
+  earliest_year: 1750
   exclude:
     - place: SXM
       date: "1956"

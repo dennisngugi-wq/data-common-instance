@@ -1,22 +1,3 @@
-"""Data Commons Platform (DCP) import folders
-
-  <out>/<ns>_schema/                 shared schema, ingested FIRST
-      config.json                    pattern *.mcf
-      schema.mcf                     schema provenance, Sources, Datasets, statvar groups, custom units
-      measured_properties.mcf        custom measured properties (<NS>_<key>_Value)
-      statvars.mcf                   statistical variables
-  <out>/<feed id>/                   one import per feed
-      <feed id>.mcf                  its Provenance (Croissant FileObject): isPartOf Dataset, licence, dates
-      <feed id>.csv                  variable,entity,date,value,unit
-      config.json                    columnMappings
-      validation_summary.json        rows, places, dates per variable
-
-Croissant mapping (knowledge/sources/croissant-dc-integration.md): Source = creator, Dataset = sc:Dataset,
-Provenance (isPartOf Dataset, provenanceCategory StatisticsProvenance) = cr:FileObject + cr:RecordSet.
-MCF node lines use ddd: for project nodes, references and CSV cells use dcid: (as Ebola and Eurostat).
-Output is sorted, so identical data gives identical bytes.
-"""
-
 import csv
 import hashlib
 import io
@@ -27,6 +8,11 @@ from datetime import date
 from pathlib import Path
 
 CSV_FIELDS = ["variable", "entity", "date", "value", "unit", "period"]
+TOPIC_MAX_MEMBERS = 40
+
+
+def _strip_dcid(s):
+    return s[5:] if s.startswith("dcid:") else s
 
 
 def _fmt(value):
@@ -41,14 +27,13 @@ class Writer:
     def __init__(self, registry):
         self.r = registry
         self.ns = registry.ns
-        self.sources_of = {}       # variable key -> source keys of the feeds that publish it
-        self.feeds_of = {}         # variable key -> feeds that publish it (dataset name and categories)
+        self.sources_of = {}
+        self.feeds_of = {}
         for f in registry.feeds.values():
             for k in f.variables:
                 self.sources_of.setdefault(k, set()).add(f.source_key)
                 self.feeds_of.setdefault(k, []).append(f)
 
-    # ------------------------------------------------------------ helpers
     def _own(self, dcid):
         return dcid.startswith(self.ns)
 
@@ -63,7 +48,6 @@ class Writer:
     def ql(prop, text):
         return f"{prop}: {_q(text)}"
 
-    # ------------------------------------------------------------ schema import
     def source_node(self, src):
         lines = ["typeOf: dcid:Source", self.ql("name", src["name"]), self.ql("url", src["url"]),
                  self.ql("domain", re.sub(r"^https?://(www\.)?", "", src["url"]).split("/")[0])]
@@ -75,11 +59,9 @@ class Writer:
         ds, src = feed.dataset, self.r.sources[feed.source_key]
         lines = ["typeOf: dcid:Dataset", self.ql("name", ds["name"]), self.ql("description", ds["description"]),
                  self.ql("url", ds["url"])]
-        if ds.get("license"):            # never written when the licence is not confirmed (license_pending)
+        if ds.get("license"):
             lines.append(self.ql("license", ds["license"]))
         lines.append(f"isPartOf: {self.ref(src['dcid'])}")
-        # dataset.citation is kept in the feed file but not written: citeAs is not yet a Data Commons property
-        # (open question in the Croissant design doc). It is shown in work/croissant/ previews.
         return self.node(feed.dataset_dcid, *lines)
 
     def schema_mcf(self):
@@ -92,9 +74,6 @@ class Writer:
                                                    "statistical variable groups and units."),
                             *( [f"source: {self.ref(first_source['dcid'])}"] if first_source else []),
                             self.ql("url", r.instance["site_url"]))]
-        # Only nodes in this instance's namespace are written. Existing Data Commons nodes (dc/s/WorldBank,
-        # dc/d/...) are referenced, never redefined, so loading this instance into another Data Commons can never
-        # change that Data Commons' own nodes (V12).
         for key in used_sources:
             if self._own(r.sources[key]["dcid"]):
                 blocks.append(self.source_node(r.sources[key]))
@@ -104,6 +83,7 @@ class Writer:
             if f.dataset_dcid not in done and self._own(f.dataset_dcid):
                 blocks.append(self.dataset_node(f))
                 done.add(f.dataset_dcid)
+        blocks += self.topic_blocks()
         blocks.append(self.node(r.root_group, "typeOf: dcid:StatVarGroup", self.ql("name", r.instance["name"]),
                                 "specializationOf: dcid:dc/g/Root"))
         for gdcid, (name, parent) in sorted(r.groups.items()):
@@ -113,6 +93,36 @@ class Writer:
             blocks.append(self.node(udcid, "typeOf: dcid:UnitOfMeasure", self.ql("name", u["name"]),
                                     self.ql("description", u["description"] or u["name"])))
         return "\n".join(blocks)
+
+    def topic_blocks(self):
+        r, by_ds = self.r, {}
+        for fid in sorted(r.feeds):
+            f = r.feeds[fid]
+            if self._own(f.dataset_dcid):
+                by_ds.setdefault(f.dataset_dcid, (f, []))[1].extend(k for k in f.variables if k in r.variables)
+        blocks = []
+        for ds_dcid, (f, keys) in sorted(by_ds.items()):
+            groups = defaultdict(list)
+            for k in dict.fromkeys(keys):
+                groups[r.variables[k].unit or ""].append(r.variables[k])
+            groups = {u: vs for u, vs in groups.items() if 2 <= len(vs) <= TOPIC_MAX_MEMBERS}
+            if not groups:
+                continue
+            name, suffix = f.dataset["name"], ds_dcid.split("Dataset_", 1)[-1]
+            topic = f"{self.ns}Topic_{suffix}"
+            peers = []
+            for i, (unit, vs) in enumerate(sorted(groups.items()), start=1):
+                pdcid = f"{self.ns}PeerGroup_{suffix}_{i}"
+                uname = (r.units.get(unit) or {}).get("name") if unit else None
+                peers.append(pdcid)
+                blocks.append(self.node(pdcid, "typeOf: dcid:StatVarPeerGroup",
+                                        self.ql("name", f"{name} ({uname})" if uname and len(groups) > 1 else name),
+                                        *[f"member: {self.ref(v.dcid)}" for v in sorted(vs, key=lambda v: v.dcid)]))
+            blocks.append(self.node(topic, "typeOf: dcid:Topic", self.ql("name", name),
+                                    self.ql("description", f.dataset.get("description") or name),
+                                    self.ql("searchDescription", name),
+                                    *[f"relevantVariable: {self.ref(p)}" for p in peers]))
+        return blocks
 
     def measured_properties_mcf(self):
         blocks = []
@@ -127,7 +137,7 @@ class Writer:
         blocks = []
         for key, v in sorted(self.r.variables.items()):
             if v.existing:
-                continue  # an existing Data Commons variable: never redefine it
+                continue
             lines = ["typeOf: dcid:StatisticalVariable", self.ql("name", v.name), self.ql("description", v.description),
                      f"populationType: dcid:{v.population_type}",
                      f"measuredProperty: {self.ref(v.measured_property)}", f"statType: dcid:{v.stat_type}"]
@@ -140,11 +150,6 @@ class Writer:
         return "\n".join(blocks)
 
     def search_texts(self, key, v):
-        """Sentences the site's search indexes for this variable (searchDescription replaces the name in the
-        index, so the name comes first): the name, the name with each name/alias of its source(s) (a search for
-        "KNBS", "Kenya Bureau of Statistics" or the full name all find it), then its dataset's title and the
-        dataset's categories from the registry sheet (Domain, Sub-domain), so searching a dataset title or a
-        category such as "Demographic & Social" or "Labour Statistics" finds its variables."""
         texts = [v.name]
         for f in sorted(self.feeds_of.get(key, ()), key=lambda f: f.id):
             title = (f.dataset or {}).get("name")
@@ -172,7 +177,6 @@ class Writer:
                 {"pattern": "*.mcf", "provenance": f"ddd:{r.schema_provenance}"}]}, indent=2) + "\n",
         }
 
-    # ------------------------------------------------------------ feed imports
     def provenance_description(self, feed):
         return " ".join(str(feed.provenance.get("description") or feed.dataset.get("description", "")).split())
 
@@ -265,22 +269,18 @@ def csv_sha(text):
 
 
 def read_published_csv(text):
-    """Published CSV -> {(statvar, place, date): value} without dcid: prefixes."""
     if not text:
         return {}
-    strip = lambda s: s[5:] if s.startswith("dcid:") else s  # noqa: E731
-    return {(strip(r["variable"]), strip(r["entity"]), r["date"]): float(r["value"])
+    return {(_strip_dcid(r["variable"]), _strip_dcid(r["entity"]), r["date"]): float(r["value"])
             for r in csv.DictReader(io.StringIO(text))}
 
 
 def foreign_nodes(files, ns):
-    """V12: nodes written for dcids outside this instance's namespace (would redefine base Data Commons)."""
     return sorted({line.split(":", 2)[2].strip() for t in files.values() for line in t.splitlines()
                    if line.startswith("Node: dcid:")})
 
 
 def undefined_references(files, ns):
-    """Project dcids referenced in the schema but never defined (they would show as bare ids on the site)."""
     texts = list(files.values())
     defined = {line.split(":", 2)[2].strip() for t in texts for line in t.splitlines()
                if line.startswith("Node: ddd:")}

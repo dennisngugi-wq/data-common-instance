@@ -1,15 +1,6 @@
-/**
- * Keep the search box responsive while a page loads its charts.
- *
- * Browsers open at most 6 HTTP/1.1 connections per host and the Explore and place pages fire 100+ chart requests at
- * once, so search suggestions waited behind them. This caps the page's other same-origin /api/ requests at MAX_BULK
- * in flight (delayed, never changed or dropped) and stops the page from overwriting the search box while the user
- * types. Loaded by templates/base.html before the page scripts.
- */
 (function () {
   "use strict";
   var MAX_BULK = 4;
-  // Requests made by the search box: never queued.
   var PRIORITY = ["/api/autocomplete", "/api/variable/info", "/api/place/placeid2dcid"];
 
   function isBulk(url) {
@@ -26,7 +17,7 @@
   }
 
   var active = 0;
-  var queue = []; // functions that start a request
+  var queue = [];
 
   function done() {
     active = Math.max(0, active - 1);
@@ -40,7 +31,6 @@
     }
   }
 
-  // For diagnosis in the browser console: requests in flight and waiting.
   window.__dcpRequestQueue = function () { return { active: active, queued: queue.length, max: MAX_BULK }; };
 
   function enqueue(start) {
@@ -52,7 +42,6 @@
     }
   }
 
-  // ---- XMLHttpRequest (axios)
   var XHR = window.XMLHttpRequest && window.XMLHttpRequest.prototype;
   if (XHR) {
     var open = XHR.open, send = XHR.send, abort = XHR.abort;
@@ -80,7 +69,6 @@
       enqueue(start);
     };
     XHR.abort = function () {
-      // Aborted while still waiting in the queue: drop it (it never took a slot).
       if (this.__dcpStart) {
         var i = queue.indexOf(this.__dcpStart);
         if (i >= 0) queue.splice(i, 1);
@@ -90,9 +78,6 @@
     };
   }
 
-  // ---- Do not overwrite what the user is typing.
-  // /explore writes its default question ("Statistics in World") into the box via queryStore. Ignore such updates
-  // while the focused box holds other text; the box's own updates always equal its current text.
   function guardStore(store) {
     if (!store || store.__dcpGuarded || typeof store.setQueryString !== "function") return;
     var set = store.setQueryString;
@@ -114,10 +99,9 @@
         get: function () { return current; },
         set: function (v) { current = v; guardStore(v); }
       });
-    } catch (e) { /* leave the stock behaviour */ }
+    } catch (e) {  }
   }
 
-  // ---- fetch
   if (window.fetch) {
     var origFetch = window.fetch;
     window.fetch = function (input, init) {

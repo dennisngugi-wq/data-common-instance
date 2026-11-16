@@ -1,20 +1,3 @@
-"""JSON-stat 2.0 (SDMX dataflows, e.g. ZIMSTAT on Open Data for Africa) -> observations + discovered variables.
-
-One dataset = one cube: a geo dimension (role "geo", e.g. REF_AREA), a time dimension (role "time",
-TIME_PERIOD) and breakdown dimensions (SEX, AGE, UNIT_MEASURE, ...). Mapping:
-
-  statistical variable   one per combination of the breakdown members that vary in the dataset
-                         dcid <NS>_<registry>_<FLOW>[_<member code>...], name "<dataset>: <member labels>"
-                         (dimensions with a single member are described, not split on)
-  unit                   UNIT_MEASURE (or the dimension named in mapping.unit_dimension) -> custom unit node
-  place                  geo member code -> dcid: codes table, else the label resolved through the gazetteer /
-                         Data Commons API with a type chosen by code pattern; codes outside place_codes are
-                         not places of this publisher (e.g. destination countries of migrants) and are skipped
-  date                   YYYY (P1Y), YYYY-MM (P1M), YYYY-Qn -> first month + observationPeriod P3M,
-                         YYYY-Sn -> P6M; anything else is reported and skipped
-No geo dimension -> mapping.default_place (the publisher's country).
-"""
-
 import json
 import re
 
@@ -28,7 +11,7 @@ PERIODS = [
     (re.compile(r"^(\d{4})-?S([12])$"), lambda m: (f"{m.group(1)}-{6 * int(m.group(2)) - 5:02d}", "P6M")),
     (re.compile(r"^(\d{4})-(\d{2})-(\d{2})$"), lambda m: (m.group(0), "")),
 ]
-SKIP_DIMS = {"FREQ"}   # frequency is implied by the date and observationPeriod
+SKIP_DIMS = {"FREQ"}
 
 
 def parse_period(code):
@@ -62,14 +45,13 @@ def _categories(dim):
 
 
 def _cells(doc):
-    """Yield ({dim id: member code}, value) for every non-empty cell (row-major, JSON-stat order)."""
     ids, sizes = doc.get("id") or list(doc["dimension"]), doc.get("size")
     codes = [_categories(doc["dimension"][d])[0] for d in ids]
     sizes = sizes or [len(c) for c in codes]
     values = doc.get("value")
     items = values.items() if isinstance(values, dict) else enumerate(values or [])
     for idx, val in items:
-        if val is None or (isinstance(val, str) and val.strip() in ("", "..", "-", "NaN")):   # JSON-stat "no value"
+        if val is None or (isinstance(val, str) and val.strip() in ("", "..", "-", "NaN")):
             continue
         idx, pos = int(idx), {}
         for d, size, cs in zip(reversed(ids), reversed(sizes), reversed(codes)):
@@ -79,7 +61,6 @@ def _cells(doc):
 
 
 def normalize(raw, feed, registry, resolver):
-    """-> Result with observations (statvar, place, date, value, period, unit) and Result.variables."""
     m, res = feed.mapping, Result()
     errs, warns = _Collector(), _Collector()
     try:
@@ -89,7 +70,6 @@ def normalize(raw, feed, registry, resolver):
         return res
     dims = doc["dimension"]
     role = doc.get("role") or {}
-    # roles may name dimensions the cube does not contain (declared REF_AREA, national-only data): use dims only
     geo = ([d for d in role.get("geo") or [] if d in dims] or [d for d in dims if d == "REF_AREA"] or [None])[0]
     time = ([d for d in role.get("time") or [] if d in dims] or [d for d in dims if d == "TIME_PERIOD"] or [None])[0]
     if not time:
@@ -101,9 +81,9 @@ def normalize(raw, feed, registry, resolver):
     breakdown = [d for d in (doc.get("id") or list(dims)) if d not in (geo, time) and d not in SKIP_DIMS]
     varying = [d for d in breakdown if len(cats[d][0]) > 1]
     constant = [d for d in breakdown if len(cats[d][0]) == 1]
-    dlabel = lambda d: str(dims[d].get("label") or d)  # noqa: E731
+    def dlabel(d):
+        return str(dims[d].get("label") or d)
 
-    # ---- places
     place_of = {}
     allowed = re.compile(m.get("place_codes", ".*"))
     if geo:
@@ -126,8 +106,6 @@ def normalize(raw, feed, registry, resolver):
             hits = resolver.resolve_all([labels[c] for c in cs], spec)
             for c in cs:
                 place_of[c] = hits.get(labels[c].strip())
-        # two members resolving to one place (e.g. a district and a town both labelled "Kariba") cannot be told
-        # apart: leave both out rather than guess
         by_dcid = {}
         for c, d in place_of.items():
             if d and c not in fixed:
@@ -147,7 +125,6 @@ def normalize(raw, feed, registry, resolver):
                              f"(e.g. hospitals), skipped: {unresolved[:8]}")
     default_place = m.get("default_place")
 
-    # ---- variables
     flow = slug(feed.meta.get("_flow") or feed.id)
     ns, prefix = registry.ns, m.get("variable_prefix", "")
     ds_name = feed.dataset.get("name") or doc.get("label") or feed.id
@@ -155,8 +132,6 @@ def normalize(raw, feed, registry, resolver):
     measured = f"{ns}_{prefix}{flow}_Value"
     variables, units, by_key = {}, {}, {}
 
-    # a cube mixing frequencies (monthly + quarterly, ...) gets one variable per frequency: 2023-Q1 and
-    # 2023-01 are different numbers that would otherwise share a date
     kinds = {(parse_period(c) or (None, None))[1] for c in cats[time][0]} - {None}
     by_freq = len(kinds) > 1
     freq_name = {"P1Y": "annual", "P6M": "half-yearly", "P3M": "quarterly", "P1M": "monthly", "": "daily"}
@@ -183,7 +158,10 @@ def normalize(raw, feed, registry, resolver):
             f"Source series: {feed.meta.get('_flow_full', flow)}."] if x)
         if by_freq:
             names.append(freq_name.get(obs_period, obs_period))
-        v = Variable(key=f"{ns}_{key}", dcid=f"{ns}_{key}", name=f"{ds_name}: {', '.join(names)}" if names else ds_name,
+        label = f"{ds_name}: {', '.join(names)}" if names else ds_name
+        if unit_dim in varying:
+            label = f"{label} ({cats[unit_dim][1][pos[unit_dim]]})"
+        v = Variable(key=f"{ns}_{key}", dcid=f"{ns}_{key}", name=label,
                      description=desc, group=m.get("group", "Other"), population_type="Thing",
                      measured_property=measured, custom_property=True, unit=unit, stat_type="measuredValue",
                      constraints={}, min=None, max=None, existing=False)
@@ -191,7 +169,6 @@ def normalize(raw, feed, registry, resolver):
         by_key[key] = v
         return v
 
-    # ---- observations
     import datetime as _dt
     this_year = _dt.date.today().year
     earliest = int(m.get("earliest_year", registry.instance.get("earliest_year", 1800)))

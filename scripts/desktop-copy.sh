@@ -1,19 +1,4 @@
 #!/usr/bin/env bash
-# A copy of this Data Commons for Docker Desktop: one container, "datacommon-project", that you start and stop with
-# the ▶ / ■ buttons in Docker Desktop (Containers). No command line needed after this script.
-#
-#   bash scripts/desktop-copy.sh            create (or refresh) the copy with today's data
-#   bash scripts/desktop-copy.sh --start    ... and start it now
-#   bash scripts/desktop-copy.sh --clean    also delete the bare containers made with "Run" on the
-#                                           datacommons-services image (they have no key or data and always fail)
-#
-# Why not just "Run" on the image? The image alone has no API key, no data and none of this site's settings, so it
-# stops with "DC_API_KEY not specified". This container is made from the same image WITH the key (from env.list,
-# kept in the container's settings, never in an image), this site's settings and a COPY of the data.
-#
-# Safe for the main instance: the main instance keeps running on Docker Engine (http://localhost:8090, refreshed every
-# night). The Docker Desktop copy serves http://localhost:8091 from desktop/dc_db, a snapshot taken when this script
-# runs; nothing it does reaches local_store/ or local_dc_db/. Run the script again to bring it up to date.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 P="$PWD"

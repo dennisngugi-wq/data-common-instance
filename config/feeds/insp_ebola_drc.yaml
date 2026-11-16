@@ -1,13 +1,3 @@
-# Ebola virus disease outbreak, Democratic Republic of the Congo, by province, from the INSP situation reports
-# (SitReps) extracted by the ebola-data-commons pipeline (Projects/ebola-data-commons).
-#
-# DATA LOCATION: the full daily history lives in that pipeline's private GCS bucket
-#   (input/ebola_drc_provinces_all_dates.csv). Until this instance can read it, the feed reads the snapshot copied
-#   from ebola-data-commons/input/ebola_drc_provinces.csv (report of 2026-07-14, 3 provinces). To go live, replace
-#   fetch.path with fetch.url (a public or signed URL of the production CSV) - nothing else changes.
-# LICENCE: INSP states no licence for the SitRep figures (not guessed). The data loads; the Croissant JSON-LD is
-#   withheld until a licence URL is confirmed (set dataset.license + license_evidence, remove `unlicensed`).
-
 enabled: true
 source: INSP_DRC
 unlicensed: load_without_croissant
@@ -38,8 +28,6 @@ mapping:
     Count_HealthZoneAffected_EbolaVirusDisease: ebola_health_zones_affected
     Count_HealthZone: health_zones_total
     Daily_Count_HealthZoneAffected_EbolaVirusDisease: ebola_health_zones_newly_affected
-  # DRC country figure = sum of the provinces (the SitRep tables are by province). Not for health_zones_total:
-  # the file lists only affected provinces, so their sum is not the country's number of health zones.
   totals:
     place: country/COD
     variables: [ebola_confirmed_cases, ebola_deaths, ebola_health_zones_affected, ebola_health_zones_newly_affected]

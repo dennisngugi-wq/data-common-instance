@@ -1,15 +1,3 @@
-"""Download (or read) one feed and return its rows as a table: a header and a list of dicts.
-
-  csv           url or path; options: delimiter, encoding, header_row
-  google_sheet  sheet_id (+ gid of the tab; none = first tab) -> the sheet's CSV export; the sheet must be shared "anyone with the link"
-  excel         url or path to .xlsx/.xlsm; options: sheet (name or index), header_row, stop_at_blank_row
-  json          url or path; records = dot path to the list of records; nested fields become "a.b"
-  html_table    url or path; table = index of the <table> on the page, or match = text inside the table
-
-`headers` (any type with a url) are sent with the request; ${VAR} is replaced by the environment variable VAR
-(set in env.list), so API tokens never sit in config files.
-"""
-
 import csv
 import datetime as dt
 import hashlib
@@ -35,9 +23,9 @@ class FetchError(Exception):
 @dataclass
 class Table:
     header: list
-    rows: list            # list of dicts header -> cell (str, int, float, date or None)
-    content_url: str      # real file / API URL (Croissant contentUrl of the original), "" for local files
-    sha256: str           # of the raw bytes
+    rows: list
+    content_url: str
+    sha256: str
     raw: bytes
     media_type: str
 
@@ -77,7 +65,6 @@ def http_get(url, headers=None, method="GET", body=None):
 
 
 def _read_source(spec):
-    """(bytes, media type, content_url) from spec['url'] or spec['path']."""
     if spec.get("url"):
         data, media, final = http_get(spec["url"], spec.get("headers"))
         return data, media, spec["url"]
@@ -97,7 +84,6 @@ def fetch(spec):
         sheet_id = str(spec.get("sheet_id", "")).strip()
         if not re.match(r"^[A-Za-z0-9_\-]{20,}$", sheet_id):
             raise FetchError("google_sheet needs sheet_id (the long id in the sheet's URL)")
-        # No gid = the first tab. (gid 0 is not always the first tab: sheets imported from Excel have other ids.)
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
         if spec.get("gid") is not None and str(spec.get("gid")).strip() != "":
             url += f"&gid={int(spec['gid'])}"
@@ -117,7 +103,6 @@ def fetch(spec):
 
 
 def parse_bytes(spec, data, url=""):
-    """Parse already-downloaded bytes (used by fetch() and to replay work/raw/ without network)."""
     kind = spec.get("type")
     if kind in ("csv", "google_sheet"):
         return _csv_table(data, spec, url, "text/csv")
@@ -142,7 +127,6 @@ def _decode(data, encoding=None):
 
 
 def _from_grid(grid, spec, url, raw, media):
-    """Rows of cells -> Table, using header_row (1-based) and dropping empty rows."""
     header_row = int(spec.get("header_row", 1))
     if len(grid) < header_row:
         raise FetchError(f"the file has fewer than {header_row} rows: no header found")
@@ -150,10 +134,10 @@ def _from_grid(grid, spec, url, raw, media):
     for i, h in enumerate(grid[header_row - 1]):
         h = "" if h is None else str(h).strip()
         if isinstance(grid[header_row - 1][i], float) and grid[header_row - 1][i].is_integer():
-            h = str(int(grid[header_row - 1][i]))         # a year header typed as a number: 2020.0 -> "2020"
+            h = str(int(grid[header_row - 1][i]))
         header.append(h or f"column_{i + 1}")
     seen = {}
-    for i, h in enumerate(header):                         # make duplicate column names unique
+    for i, h in enumerate(header):
         if h in seen:
             seen[h] += 1
             header[i] = f"{h}_{seen[h]}"
@@ -184,7 +168,7 @@ def _csv_table(data, spec, url, media):
 
 
 def _excel_table(data, spec, url):
-    import openpyxl  # only needed for excel feeds
+    import openpyxl
 
     if data[:4] != b"PK\x03\x04":
         raise FetchError("not an .xlsx/.xlsm workbook (old .xls files: open and save as .xlsx)")
@@ -301,7 +285,6 @@ def save_raw(table, folder: Path, feed_id):
 
 
 def fetch_raw(spec):
-    """Non-tabular sources (type jsonstat): the response bytes, from url (GET/POST with JSON body) or path."""
     if spec.get("url"):
         method = str(spec.get("method", "GET")).upper()
         data, media, _ = http_get(spec["url"], spec.get("headers"), method=method,

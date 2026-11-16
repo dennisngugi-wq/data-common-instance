@@ -14,29 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -#}
 
-
-{#-
-To add pages that extend this template, set the following variables:
-title: page title (used in the browser title bar)
-main_id: DOM element ID for the main content block
-page_id: DOM element ID for the html element 
-
-Override these blocks:
-head - head elements
-content - main page content
-
-For more details, please see https://docs.datacommons.org/custom_dc/custom_ui.html
--#}
-
 <!DOCTYPE html>
-{#- As on datacommons.org, the header search bar shows on every page except the
-    homepage, which has its own search box. Stock custom template hid it everywhere. -#}
-{% set is_hide_header_search_bar = 'true' if page_id == 'page-homepage' else '' %}
+{% set is_hide_header_search_bar = '' %}
 
 <html lang={{ locale }} id={{ page_id }}>
 
 <head>
-  {# Enable Google Analytics with cookieless tracking. #}
   {% if GOOGLE_ANALYTICS_TAG_ID %}
   <script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_TAG_ID }}"></script>
   <script>
@@ -54,19 +37,15 @@ For more details, please see https://docs.datacommons.org/custom_dc/custom_ui.ht
   <script>
     globalThis.FEATURE_FLAGS = {{ config['FEATURE_FLAGS'] | tojson }};
     globalThis.disableGoogleMaps = {{ config['DISABLE_GOOGLE_MAPS'] | tojson }};
-    {#- the stock custom template does not pass this, so custom.py's tree settings were ignored. #}
     globalThis.STAT_VAR_HIERARCHY_CONFIG = {{ config['STAT_VAR_HIERARCHY_CONFIG'] | tojson }};
   </script>
-  {#- caps the page's chart requests so the search box's suggestions never wait behind them
-      (static/request_priority.js). Must load before the page scripts. #}
   <script src="/custom_dc/custom/request_priority.js"></script>
-  {#- with no real Google Maps key, place search boxes use the site's own place index instead of Google
-      Places (static/place_search.js, app_env/custom.py). Must load before the page scripts. #}
   {% if config.get('LOCAL_PLACE_SEARCH') %}
   <script src="/custom_dc/custom/place_search.js"></script>
   {% endif %}
 
   <title>{{ title }} - {{NAME}}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ LOGO_PATH }}">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;600&family=Roboto&display=swap"
@@ -81,7 +60,6 @@ For more details, please see https://docs.datacommons.org/custom_dc/custom_ui.ht
 </head>
 
 <body {% if is_hide_header_search_bar %}class="no-header-search-bar"{% endif %}>
-{# Set page locale and pass header/footer configuration to base.js #}
 <div id="metadata-base" class="d-none"
     data-header="{{ HEADER_MENU }}"
     data-footer="{{ FOOTER_MENU }}"
@@ -114,8 +92,6 @@ For more details, please see https://docs.datacommons.org/custom_dc/custom_ui.ht
       {% endblock %}
     </main>
 
-    {#- the stock custom template lacks the footer container base.js renders into (React error #200 on
-        every page) and the jQuery/Bootstrap the main template loads (found in africa-dcp). -#}
     <footer id="main-footer"></footer>
   </div>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -124,7 +100,6 @@ For more details, please see https://docs.datacommons.org/custom_dc/custom_ui.ht
     crossorigin="anonymous"></script>
   {% block footer %}
   {% endblock %}
-  {#- with Google Maps off, Knowledge Graph pages draw the place boundary with Leaflet + OpenStreetMap. -#}
   {% if page_id == 'page-dc-browser' and config['DISABLE_GOOGLE_MAPS'] %}
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <style>.gdc-overview-map{height:240px;margin:.5em 0 1.25em;border-radius:8px;z-index:0}</style>
@@ -132,10 +107,7 @@ For more details, please see https://docs.datacommons.org/custom_dc/custom_ui.ht
   <script src="/custom_dc/custom/browser_map.js"></script>
   {% endif %}
 <script>
-  {#- Parent places read top-down with "›" (World › Africa), not "Africa, World". The server
-      already sends them top-down (custom.py); this only swaps the ", " between the parent links for " › ". -#}
   (function () {
-    // Stock markup: <span><a>World</a>, </span><span><a>Africa</a></span> -> "World › Africa"
     function fix(root) {
       if (!root.querySelectorAll) return;
       root.querySelectorAll('a.place-info-link, p.subheader a, .explore-place-header a').forEach(function (a) {

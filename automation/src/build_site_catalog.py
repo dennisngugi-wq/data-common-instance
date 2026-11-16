@@ -1,19 +1,4 @@
 #!/usr/bin/env python3
-"""Site catalogue files, regenerated after every run from what is published (site/static/, served at
-/custom_dc/custom/...):
-
-  catalog.json          sources -> datasets (name, description, licence or PENDING, landing page, data link,
-                        coverage, places, variables, refresh date): the /data page and the sitemap
-  variables.json        every variable (dcid, name, source) + each source's names/aliases: search suggestions and the drill-down picker
-  data_places.json      every place that has at least one value in this instance (the search checks these first
-                        when it decides whether a "by country / by province" chart has data; see custom.py)
-  var_home.json         variable dcid -> the country that holds most of its data (a question that names no place,
-                        e.g. "Food Poverty Line", is answered for that country instead of the World; see custom.py)
-  croissant_extra.json  per dataset: keywords, spatialCoverage, variableMeasured (added to the Croissant JSON-LD;
-                        the knowledge graph has no property for them yet)
-Prints CHANGED / UNCHANGED.
-"""
-
 import argparse
 import csv
 import io
@@ -22,8 +7,10 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import croissant
 import registries
 import registry as registry_mod
+import runlog
 import settings
 from storage import LocalStore
 
@@ -54,10 +41,10 @@ def build(store_dir):
             return place
         return next((u for u in reversed(ups.get(place, [])) if u.startswith("country/")), None)
 
-    home = {}   # variable dcid -> Counter of countries
+    home = {}
     for fid in sorted(reg.feeds):
         text = store.read_text(f"{settings.DCP_INPUT_ROOT}/{fid}/{fid}.csv")
-        if not text:
+        if not text or not croissant.publishable(reg.feeds[fid], reg):
             continue
         f, st = reg.feeds[fid], state["feeds"].get(fid, {})
         src = reg.sources[f.source_key]
@@ -98,10 +85,9 @@ def build(store_dir):
         s["datasets"].sort(key=lambda d: d["name"] or "")
     src_list = [{"name": s["name"], "keywords": " ".join([s["name"]] + s["aliases"])} for s in catalog["sources"]]
     idx = {s["name"]: i for i, s in enumerate(src_list)}
-    compact = {"sources": src_list,   # variables: [dcid, name, source index]
+    compact = {"sources": src_list,
                "variables": [[v["dcid"], v["name"], idx[v["source"]]]
                              for v in sorted(variables.values(), key=lambda v: v["name"])]}
-    # only variables that really belong to one country (most of their values); world-wide ones keep the World
     var_home = {v: c.most_common(1)[0][0] for v, c in sorted(home.items())
                 if c and c.most_common(1)[0][1] >= 0.5 * sum(c.values())}
     return {"catalog.json": catalog, "variables.json": compact, "data_places.json": sorted(data_places),
@@ -110,7 +96,7 @@ def build(store_dir):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description=__doc__)
+    p = argparse.ArgumentParser()
     p.add_argument("--store-dir", default=str(settings.PROJECT_ROOT / "local_store"))
     p.add_argument("--out-dir", default=str(settings.PROJECT_ROOT / "site" / "static"))
     a = p.parse_args(argv)
@@ -121,7 +107,8 @@ def main(argv=None):
         if not path.exists() or path.read_text(encoding="utf-8") != text:
             path.write_text(text, encoding="utf-8")
             changed.append(name)
-    print(f"site catalogue: {'CHANGED ' + str(changed) if changed else 'UNCHANGED'}")
+    print(runlog.item("Website dataset catalogue", "changed" if changed else "unchanged",
+                      ", ".join(changed)))
     return 0
 
 

@@ -1,24 +1,4 @@
 #!/usr/bin/env python3
-"""Merge the published imports into the input folder of the local Data Commons loader.
-
-Reads only what the pipeline published (validated data) from <store>/ingestion/input/ and writes <out>/:
-
-  config.json      inputFiles (variablePerRow CSVs) + sources/provenances
-  schema.mcf       Sources, Datasets, statvar groups, units, measured properties, statvars (dcid: node lines)
-  provenance.mcf   Croissant properties of each provenance (isPartOf Dataset, licence, refresh dates, ...)
-  <feed>.csv       entity,variable,date,value,unit (bare dcids)
-
-Differences from the DCP (Spanner) import, needed by the local SQLite loader (datacommons-data:stable):
-  - node lines use dcid: (the local loader does not resolve ddd:), CSV cells hold bare dcids;
-  - the loader creates the provenance nodes itself from config.json, with ids c/p/1, c/p/2, ... in config order
-    (sources in order, then their provenances). The Provenance MCF of each feed is therefore re-keyed to its
-    c/p/N id, keeping every Croissant property, so /browser/<dataset> can build the same JSON-LD as on DCP.
-    Source and Dataset nodes keep their real dcids.
-
-Rewrites files only when their content changes and prints CHANGED or UNCHANGED, so the scheduler reloads the
-database only when the data really changed. Never touches the loader's own output.
-"""
-
 import argparse
 import csv
 import io
@@ -26,11 +6,13 @@ import json
 import sys
 from pathlib import Path
 
+import croissant
 import registry as registry_mod
+import runlog
 import settings
 
 CSV_FIELDS = ["entity", "variable", "date", "value", "unit", "observationPeriod"]
-LOADER_WRITES = ("typeOf", "name", "source", "url")    # the loader writes these for c/p/N itself
+LOADER_WRITES = ("typeOf", "name", "source", "url")
 
 
 def _bare(v):
@@ -46,7 +28,7 @@ def local_schema(texts):
     for text in texts:
         for block in _blocks(text):
             if "typeOf: dcid:Provenance" in block:
-                continue  # schema provenance: the loader uses config.json provenances
+                continue
             out.append(block.replace("Node: ddd:", "Node: dcid:", 1))
     return "\n\n".join(out) + "\n"
 
@@ -71,7 +53,6 @@ def local_csv(text):
 
 
 def provenance_ids(reg, feed_ids):
-    """config.json sources/provenances in a fixed order and the c/p/N id the loader will give each feed."""
     sources, order = {}, []
     for fid in sorted(feed_ids):
         f = reg.feeds[fid]
@@ -81,7 +62,7 @@ def provenance_ids(reg, feed_ids):
     for sname, s in sources.items():
         for pname in s["provenances"]:
             order.append(pname)
-    ids = {pname: f"c/p/{i}" for i, pname in enumerate(order, start=1)}   # c/p/default is the loader's 0th
+    ids = {pname: f"c/p/{i}" for i, pname in enumerate(order, start=1)}
     return sources, ids
 
 
@@ -94,7 +75,8 @@ def build(store_dir, out_dir, reg=None):
     schema_files = sorted((root / reg.schema_import).glob("*.mcf"))
     if not schema_files:
         raise SystemExit(f"No published schema in {root / reg.schema_import}: run the pipeline first")
-    live = [fid for fid in sorted(reg.feeds) if (root / fid / f"{fid}.csv").exists()]
+    live = [fid for fid in sorted(reg.feeds) if (root / fid / f"{fid}.csv").exists()
+            and croissant.publishable(reg.feeds[fid], reg)]
     if not live:
         raise SystemExit(f"No published feed imports in {root}")
     names = {fid: reg.feeds[fid].provenance.get("name") or fid for fid in live}
@@ -131,13 +113,18 @@ def build(store_dir, out_dir, reg=None):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser()
     p.add_argument("--store-dir", default=str(settings.PROJECT_ROOT / "local_store"))
     p.add_argument("--out-dir", default=str(settings.PROJECT_ROOT / "local_dc"))
     args = p.parse_args(argv)
     changed, rows, live = build(args.store_dir, args.out_dir)
-    print(f"local_dc: {rows} observations from {len(live)} feed(s) {live} in {args.out_dir}")
-    print(f"CHANGED {changed}" if changed else "UNCHANGED")
+    status = "changed" if changed else "unchanged"
+    work = settings.PROJECT_ROOT / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "local_dc_status.txt").write_text(status.upper() + "\n")
+    print(runlog.item("Database input files", status,
+                      f"{rows:,} values from {len(live)} dataset(s)"
+                      + (f" · {len(changed)} file(s) changed" if changed else "")))
     return 0
 
 

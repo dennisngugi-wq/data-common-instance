@@ -1,18 +1,3 @@
-"""Table (fetch.py) + feed mapping -> observations {statvar, place, date, value}.
-
-Three layouts, chosen by the mapping keys:
-
-  wide        values: {column: variable_key | {variable, scale}}          one column per variable
-  long        variable_column + value_column + variables_map              one row per number
-  years       year_columns: true + variable (or variable_column + map)    one column per year (2019, 2020, ...)
-
-Common keys: place {column | value, match, type, within}, date {column | value, format}, filters {column: value(s)},
-missing [tokens], scale (whole feed), unresolved_places: error | skip.
-
-Problems are collected, not raised: `Result.errors` stop the feed from being published (the previous version
-stays live), `Result.warnings` are reported only.
-"""
-
 import datetime as dt
 import re
 from dataclasses import dataclass, field
@@ -33,7 +18,6 @@ class Result:
 
 
 class _Collector:
-    """Groups repeated problems: one message per rule with a count and a few examples."""
 
     def __init__(self):
         self.items = {}
@@ -49,13 +33,12 @@ class _Collector:
 
 
 def parse_value(cell, missing, scale=1.0):
-    """-> float, None (missing) or raises ValueError."""
     if cell is None:
         return None
     if isinstance(cell, bool):
         raise ValueError(str(cell))
     if isinstance(cell, (int, float)):
-        if cell != cell:  # NaN
+        if cell != cell:
             return None
         return float(cell) * scale
     text = str(cell).strip()
@@ -68,7 +51,6 @@ def parse_value(cell, missing, scale=1.0):
 
 
 def parse_date(cell, fmt=None):
-    """-> ISO date string: YYYY, YYYY-MM or YYYY-MM-DD; raises ValueError."""
     if cell is None:
         raise ValueError("empty")
     if isinstance(cell, (dt.date, dt.datetime)):
@@ -106,7 +88,6 @@ def normalize(table, feed, registry, resolver):
     feed_scale = float(m.get("scale", 1))
     header = set(table.header)
 
-    # ---- columns the mapping needs
     needed = []
     place_spec, date_spec = m.get("place") or {}, m.get("date") or {}
     if "column" in place_spec:
@@ -125,7 +106,6 @@ def normalize(table, feed, registry, resolver):
         res.errors.append(f"E3 columns not found: {absent}; the file has: {table.header[:40]}")
         return res
 
-    # ---- filters
     rows = table.rows
     for col, want in (m.get("filters") or {}).items():
         allowed = {str(w) for w in (want if isinstance(want, list) else [want])}
@@ -133,10 +113,11 @@ def normalize(table, feed, registry, resolver):
     res.stats["rows_in_file"] = len(table.rows)
     res.stats["rows_after_filters"] = len(rows)
 
-    # ---- places
     if "value" in place_spec:
         place_of = {None: str(place_spec["value"])}
-        get_place = lambda r: None  # noqa: E731
+
+        def get_place(r):
+            return None
     else:
         place_col = place_spec["column"]
 
@@ -157,9 +138,8 @@ def normalize(table, feed, registry, resolver):
         if name in place_of:
             warns.add("place name matched several places; first one used", f"{name} -> {cands}")
 
-    # ---- variables
     var = registry.variables
-    cells = []   # (row, variable key, raw value cell, date cell, scale)
+    cells = []
     if m.get("values"):
         for r in rows:
             for value_col, target in m["values"].items():
@@ -190,7 +170,6 @@ def normalize(table, feed, registry, resolver):
             cells.append((r, key, r.get(m["value_column"]), r.get(date_spec.get("column"))
                           if date_spec.get("column") else date_spec.get("value"), 1.0))
 
-    # ---- build observations
     seen = {}
     this_year = dt.date.today().year
     earliest = int(m.get("earliest_year", registry.instance.get("earliest_year", 1800)))
@@ -258,10 +237,6 @@ def normalize(table, feed, registry, resolver):
 
 
 def _add_totals(m, var, seen, res):
-    """mapping.totals: publish a parent place's value as the SUM of the places in the file, for variables where that
-    is arithmetically true (counts, running totals), e.g.
-        totals: {place: country/COD, variables: [ebola_confirmed_cases, ebola_deaths], reason: "..."}
-    Never overwrites a value the source publishes for that place; the run report says how many were added."""
     t = m.get("totals")
     if not t:
         return
@@ -288,9 +263,6 @@ def _add_totals(m, var, seen, res):
 
 
 def _exclusions(m, place_of, res):
-    """mapping.exclude: reviewed rows to leave out, each with a reason, e.g.
-         - {place: SXM, date: "1956", variable: co2_emissions_per_capita, reason: "implausible: ..."}
-    place may be the raw cell value or a dcid; date and variable are optional (all dates / all variables)."""
     out = []
     for e in m.get("exclude") or []:
         if not isinstance(e, dict) or not e.get("place") or not e.get("reason"):

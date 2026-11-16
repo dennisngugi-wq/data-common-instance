@@ -1,0 +1,4 @@
+#!/bin/sh
+touch /project/work/REFRESH_NOW
+echo "Refresh requested: it starts within a minute."
+echo "Follow it: tail -f logs/pipeline.log   (result: logs/last_refresh.txt, earlier runs: logs/history/)"

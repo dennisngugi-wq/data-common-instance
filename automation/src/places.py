@@ -1,17 +1,3 @@
-"""Turn the place column of a feed (names, ISO3 codes or dcids) into Data Commons place dcids.
-
-Order: config/places.yaml aliases -> built-in gazetteer (data/places_base.json: World, continents, UN M49
-sub-regions, 215 countries with ISO3 codes and alternative names) -> Data Commons resolve API (only with
-DC_API_KEY; hits are cached in the store so the nightly run gives the same answer every time).
-
-match:  auto   dcid if it looks like one, else ISO3, else name
-        dcid   the cell is already a dcid (country/KEN, geoId/06, wikidataId/Q1234)
-        iso3   ISO 3166-1 alpha-3 country code
-        name   a place name
-Optional `type` (e.g. AdministrativeArea1, County, City) and `within` (a dcid, e.g. country/KEN) narrow API
-lookups of names that are not in the gazetteer.
-"""
-
 import json
 import logging
 import re
@@ -29,7 +15,6 @@ GENERIC_WORDS = {"province", "provincial", "metropolitan", "metro", "district", 
 
 
 def _core(name):
-    """Place name without generic words: "Bulawayo Metropolitan Province" -> "bulawayo"."""
     words = [w for w in norm(name).split() if w not in GENERIC_WORDS]
     return " ".join(words) or norm(name)
 
@@ -52,15 +37,13 @@ class PlaceResolver:
             if p["dcid"].startswith("country/"):
                 self.by_iso3[p["dcid"][8:]] = p["dcid"]
         self.aliases = aliases or {}
-        self.cache = cache if cache is not None else {}     # "type|within|name" -> {"dcid", "name"}
+        self.cache = cache if cache is not None else {}
         self.allow_api = allow_api and bool(settings.DC_API_KEY)
         self.api_calls = 0
-        self.ambiguous = {}                                  # name -> [candidates] (warnings)
-        self.used = {}                                       # dcid -> display name (for the site place index)
+        self.ambiguous = {}
+        self.used = {}
 
-    # ------------------------------------------------------------------ public
     def resolve_all(self, values, spec):
-        """{raw value: dcid or None} for the distinct raw values of one feed."""
         match = spec.get("match", "auto")
         out, pending, codes = {}, [], []
         for raw in sorted({str(v).strip() for v in values if v is not None and str(v).strip()}):
@@ -73,14 +56,12 @@ class PlaceResolver:
                 codes.append(raw)
             elif match in ("name", "auto"):
                 pending.append(raw)
-        if codes:  # ISO3 codes outside the gazetteer (territories such as AIA, MYT): exists as country/<code>?
+        if codes:
             for raw, hit in self._api_iso3(codes).items():
                 out[raw] = hit
             if match == "auto":
                 pending += [c for c in codes if not out[c]]
         if pending and spec.get("type") and spec.get("within"):
-            # Official children first: e.g. Zimbabwe's provinces. The resolve API can return a namesake (it maps
-            # "Bulawayo" to the city, not Bulawayo Province), so a name that matches a child is never sent to it.
             kids = self.children(spec["within"], spec["type"])
             for raw in list(pending):
                 hit = kids.get(_core(raw))
@@ -89,7 +70,7 @@ class PlaceResolver:
                     pending.remove(raw)
         if pending:
             hits = self._api(pending, spec.get("type"), spec.get("within"))
-            if spec.get("type") and not spec.get("strict_type"):   # nothing under that type: try without it
+            if spec.get("type") and not spec.get("strict_type"):
                 hits.update(self._api([p for p in pending if p not in hits], None, spec.get("within")))
             for raw, hit in hits.items():
                 out[raw] = hit
@@ -106,7 +87,6 @@ class PlaceResolver:
                 return hit["name"]
         return fallback or dcid
 
-    # ------------------------------------------------------------------ local
     def _local(self, raw, match):
         key = norm(raw)
         if key in self.aliases:
@@ -126,7 +106,6 @@ class PlaceResolver:
             return raw[5:] if raw.startswith("dcid:") else raw
         return self.by_name.get(key)
 
-    # ------------------------------------------------------------------ Data Commons resolve API
     def _api(self, names, type_of=None, within=None):
         result, todo = {}, []
         for name in names:
@@ -163,7 +142,6 @@ class PlaceResolver:
         return result
 
     def children(self, parent, type_of):
-        """{core name: dcid} of the places of this type contained in parent (Data Commons graph, cached)."""
         ck = f"children|{type_of}|{parent}"
         if ck in self.cache:
             return self.cache[ck]

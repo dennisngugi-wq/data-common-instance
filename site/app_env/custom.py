@@ -11,16 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# DataCommon Project customisation of the stock Data Commons website (mounted by docker-compose.yml):
-#   1. instance name and namespace from config/instance.yaml;
-#   2. place search from the site's own index when there is no Google Maps key;
-#   3. questions without a place default to the World;
-#   4. Croissant 1.1 JSON-LD on /browser/<dataset dcid> and /croissant/<dataset dcid> (backport of upstream
-#      server/lib/croissant_metadata.py, which the :stable image predates);
-#   5. search shows a variable only when it really matches the question (SEARCH_MIN_SCORE, default 0.7);
-#   6. local place names the recogniser misses (DRC, Nord-Kivu, Ituri...);
-#   7. parent places listed top-down (World › Africa › Kenya).
 
 import importlib.abc
 import importlib.util
@@ -35,7 +25,6 @@ import unicodedata
 from server.app_env import _base
 from server.app_env import local
 
-# ---------------------------------------------------------------- instance settings
 INSTANCE_FILE = '/workspace/instance.yaml'
 
 
@@ -54,7 +43,6 @@ INSTANCE_NAME = str(_INST.get('name') or 'Custom Data Commons')
 NAMESPACE = str(_INST.get('namespace') or 'DCProject')
 SITE_URL = (os.environ.get('SITE_URL') or str(_INST.get('site_url') or 'http://localhost:8090')).rstrip('/')
 
-# Place search without Google Maps (site/static/places.json, built by automation/src/build_place_index.py)
 _MAPS_KEY = os.environ.get('MAPS_API_KEY', '').strip()
 LOCAL_PLACE_SEARCH = (os.environ.get('LOCAL_PLACE_SEARCH', '').lower() == 'true' or
                       _MAPS_KEY in ('', 'not-configured', 'your_key_here'))
@@ -64,15 +52,14 @@ PLACE_ID_PREFIX = 'dcid:'
 
 class Config(_base.Config):
   CUSTOM = True
-  NAME = INSTANCE_NAME  # changed: was "Custom Data Commons"
+  NAME = INSTANCE_NAME
   OVERRIDE_CSS_PATH = '/custom_dc/custom/overrides.css'
   LOGO_PATH = "/custom_dc/custom/logo.svg"
   MIN_STAT_VAR_GEO_COVERAGE = 1
   SHOW_DISASTER = False
   USE_LLM = False
   USE_MEMCACHE = False
-  LOCAL_PLACE_SEARCH = LOCAL_PLACE_SEARCH  # templates/base.html loads place_search.js when True
-  # This instance's variable group first in the Statistical Variable Explorer.
+  LOCAL_PLACE_SEARCH = LOCAL_PLACE_SEARCH
   STAT_VAR_HIERARCHY_CONFIG = {
       "nodes": [{
           "dcid": "dc/g/Root"
@@ -86,7 +73,6 @@ class Config(_base.Config):
   }
 
 
-# ---------------------------------------------------------------- default place = World
 def _patch_default_place(helpers):
   from server.lib.nl.common import constants as nl_constants
   stock = helpers._get_default_place
@@ -100,7 +86,6 @@ def _patch_default_place(helpers):
   logging.info('custom.py: search default place set to Earth')
 
 
-# ---------------------------------------------------------------- local place search
 _places = None
 
 
@@ -124,8 +109,74 @@ def _place_index():
   return _places
 
 
+WORLD_INDEX = '/workspace/custom_data/world_places.tsv'
+WORLD_LEVELS = {'AdministrativeArea1': 4, 'AdministrativeArea2': 5, 'AdministrativeArea3': 6, 'City': 6}
+_world = {'mtime': None, 'rows': [], 'buckets': {}}
+
+
+def _world_index():
+  try:
+    mtime = os.path.getmtime(WORLD_INDEX)
+  except OSError:
+    return _world
+  if mtime != _world['mtime']:
+    rows, buckets = [], {}
+    try:
+      with open(WORLD_INDEX, encoding='utf-8') as f:
+        for line in f:
+          parts = line.rstrip('\n').split('\t')
+          if len(parts) != 4:
+            continue
+          key = _norm(parts[1])
+          i = len(rows)
+          rows.append((parts[0], parts[1], parts[2], parts[3], key))
+          for w in set(key.split()):
+            buckets.setdefault(w[:2], []).append(i)
+      _world.update(mtime=mtime, rows=rows, buckets=buckets)
+      logging.info('custom.py: world place search loaded, %d places', len(rows))
+    except Exception:
+      logging.exception('custom.py: world place index %s not readable', WORLD_INDEX)
+  return _world
+
+
+def _preload_world():
+  import threading
+  threading.Thread(target=_world_index, name='dcp-world-places', daemon=True).start()
+
+
+def search_world(query, limit=8, skip=()):
+  q = _norm(query)
+  if len(q) < 2:
+    return []
+  world = _world_index()
+  scored = []
+  for i in world['buckets'].get(q.split()[0][:2], []):
+    dcid, name, typ, parent, key = world['rows'][i]
+    if dcid in skip:
+      continue
+    if key == q:
+      s = 0
+    elif key.startswith(q):
+      s = 1
+    elif (' ' + key).find(' ' + q) >= 0:
+      s = 2
+    else:
+      continue
+    scored.append((s, WORLD_LEVELS.get(typ, 6), len(name), name, dcid, typ, parent))
+  scored.sort()
+  return [(s, {'dcid': d, 'name': n, 'type': t, 'parent': p, 'level': lvl})
+          for s, lvl, _, n, d, t, p in scored[:limit]]
+
+
 def search_places(query, limit=5):
-  """Same matching as place_search.js: exact, name prefix, word prefix, then substring (lower is better)."""
+  local = _search_local(query, limit)
+  world = search_world(query, limit, {p['dcid'] for _, p in local})
+  merged = sorted([(s, 0, i, p) for i, (s, p) in enumerate(local)] +
+                  [(s, 1, i, p) for i, (s, p) in enumerate(world)], key=lambda x: x[:3])
+  return [p for _, _, _, p in merged[:limit]]
+
+
+def _search_local(query, limit=5):
   q = _norm(query)
   if not q:
     return []
@@ -145,13 +196,11 @@ def search_places(query, limit=5):
       best = min(best, s + (0.5 if i else 0))
     if best < 99:
       scored.append((best, p.get('level', 6), len(p['name']), p))
-  # equally good matches: the higher place first (World, continents, regions, countries, provinces, districts)
   scored.sort(key=lambda x: (x[0], x[1], x[2]))
-  return [x[-1] for x in scored[:limit]]
+  return [(x[0], x[-1]) for x in scored[:limit]]
 
 
 def _patch_place_api(place):
-  """/api/place/placeid2dcid: ids from place_search.js are "dcid:<dcid>"; return the dcid itself."""
   from flask import Response
   stock = place.findplacedcid
 
@@ -167,7 +216,6 @@ def _patch_place_api(place):
 
 
 def _patch_autocomplete(helpers):
-  """Search box place suggestions (/api/autocomplete) from the local index instead of Google Maps."""
   from server.routes.shared_api.autocomplete.types import ScoredPrediction
   place = sys.modules.get('server.routes.shared_api.place')
   if place is not None:
@@ -176,14 +224,13 @@ def _patch_autocomplete(helpers):
   def get_place_predictions(queries, lang, source):
     best = {}
     for q in queries:
-      if _norm(q) in _STOP:   # "ebola cases in": the word "in" is not the start of India / Indonesia
+      if _norm(q) in _STOP:
         continue
       for rank, p in enumerate(search_places(q)):
         score = rank - len(q) * 0.01
         if p['dcid'] not in best or score < best[p['dcid']][0]:
           best[p['dcid']] = (score, q, p)
     return [
-        # Only the name: "Kenya, Eastern Africa, Africa" would make the search see several places.
         ScoredPrediction(description=p['name'],
                          place_id=PLACE_ID_PREFIX + dcid, place_dcid=dcid, matched_query=q, score=score,
                          source=source) for dcid, (score, q, p) in best.items()
@@ -197,10 +244,6 @@ _GOOGLE_MAPS_SCRIPT = re.compile(
     rb'<script[^>]*src="https://maps\.googleapis\.com/maps/api/js[^"]*"[^>]*>\s*</script>')
 
 
-# ---------------------------------------------------------------- indicator suggestions
-# datacommons.org suggests indicators with Vertex AI Search, which a local instance does not have. Here they come from
-# static/variables.json (automation/src/build_site_catalog.py), matched on the variable name and on every name/alias
-# of its source ("KNBS ..." and "Kenya Bureau of Statistics ..." both work).
 VARIABLES_FILE = '/workspace/server/dist/custom_dc/custom/variables.json'
 _STOP = {'of', 'in', 'the', 'for', 'and', 'a', 'an', 'to', 'by', 'on', 'what', 'is', 'are', 'how', 'many', 'much',
          'show', 'me', 'tell', 'about', 'which', 'with', 'highest', 'lowest', 'most', 'total', 'data', 'vs',
@@ -231,9 +274,11 @@ def _indicator_index():
   return _indicators
 
 
+def _word_hit(x, w, last):
+  return x == w or ((last or len(w) >= 3) and x.startswith(w))
+
+
 def search_indicators(query, limit=6):
-  """Every query word (stop words dropped; the last may be half-typed) must start a word of the variable's name or
-  of its source's names/aliases. Name matches rank first, then shorter names."""
   words = [w for w in _norm(query).split() if w not in _STOP]
   if not words:
     return []
@@ -242,10 +287,9 @@ def search_indicators(query, limit=6):
     score = 0
     for n, w in enumerate(words):
       last = n == len(words) - 1
-      ok = lambda x: x == w or ((last or len(w) >= 3) and x.startswith(w))  # noqa: E731
-      if any(ok(x) for x in ind['name_words']):
+      if any(_word_hit(x, w, last) for x in ind['name_words']):
         continue
-      if any(ok(x) for x in ind['src_words']):
+      if any(_word_hit(x, w, last) for x in ind['src_words']):
         score += 1
         continue
       break
@@ -256,7 +300,6 @@ def search_indicators(query, limit=6):
 
 
 def _split_place(query):
-  """Longest place name or alias at the end of the query: (indicator part, place name) or (query, None)."""
   q = _norm(query)
   best = None
   for p in _place_index():
@@ -282,8 +325,6 @@ def _patch_stat_var_autocomplete(stat_vars):
             'place_name': place}
 
   def search_stat_vars(search_query):
-    # Suggest only for the whole phrase typed (without the place): answering the stock per-word lookups made a pick
-    # replace part of the question ("new ebola" -> "new Confirmed Ebola cases").
     import flask
     full, _ = _split_place(flask.request.args.get('query', '') or '')
     want = [w for w in _norm(full).split() if w not in _STOP]
@@ -300,7 +341,6 @@ def _patch_stat_var_autocomplete(stat_vars):
   logging.info('custom.py: indicator suggestions served from %d local variables', len(_indicator_index()))
 
 
-# ---------------------------------------------------------------- pages and crawler files
 CATALOG_FILE = '/workspace/server/dist/custom_dc/custom/catalog.json'
 EXTRA_FILE = '/workspace/server/dist/custom_dc/custom/croissant_extra.json'
 
@@ -313,10 +353,90 @@ def _json_file(path, default):
     return default
 
 
+DATA_DIR = os.environ.get('DCP_DATA_DIR', '/data')
+_datasets = {}
+
+
+def _find_dataset(dcid):
+  for src in _json_file(CATALOG_FILE, {}).get('sources', []):
+    for ds in src.get('datasets', []):
+      if ds.get('dcid') == dcid:
+        return {k: v for k, v in src.items() if k != 'datasets'}, ds
+  return None, None
+
+
+def _place_names(dcids):
+  names = {p['dcid']: p['name'] for p in _place_index() if p['dcid'] in dcids}
+  missing = dcids - names.keys()
+  if missing:
+    names.update({r[0]: f'{r[1]} ({r[3]})' if r[3] else r[1] for r in _world_index()['rows'] if r[0] in missing})
+  return names
+
+
+def dataset_detail(dcid):
+  import csv
+  src, ds = _find_dataset(dcid)
+  if not ds or not re.fullmatch(r'[A-Za-z0-9_.-]+', ds.get('feed') or ''):
+    return None
+  if not all(ds.get(k) for k in ('name', 'description', 'url', 'license')) or not (src or {}).get('url'):
+    return None
+  path = os.path.join(DATA_DIR, ds['feed'] + '.csv')
+  try:
+    mtime = os.path.getmtime(path)
+  except OSError:
+    return None
+  cached = _datasets.get(dcid)
+  if cached and cached['mtime'] == mtime and cached['meta'] == ds:
+    return cached
+  var_names = {d: n for d, n, _ in _json_file(VARIABLES_FILE, {}).get('variables', [])}
+  observations, variables, places = [], {}, {}
+  with open(path, encoding='utf-8', newline='') as f:
+    for r in csv.DictReader(f):
+      place, var, date = r.get('entity', ''), r.get('variable', ''), r.get('date', '')
+      try:
+        value = float(r.get('value', ''))
+      except ValueError:
+        continue
+      unit = r.get('unit') or ''
+      observations.append([place, var, date, value, unit])
+      v = variables.setdefault(var, {'dcid': var, 'name': var_names.get(var, var), 'units': set(), 'places': set(),
+                                     'count': 0, 'first_date': date, 'last_date': date})
+      v['count'] += 1
+      v['places'].add(place)
+      if unit:
+        v['units'].add(unit)
+      v['first_date'], v['last_date'] = min(v['first_date'], date), max(v['last_date'], date)
+      p = places.setdefault(place, {'dcid': place, 'count': 0, 'variables': set()})
+      p['count'] += 1
+      p['variables'].add(var)
+  names = _place_names(set(places))
+  for p in places.values():
+    p['name'] = names.get(p['dcid'], p['dcid'])
+    p['variables'] = len(p['variables'])
+  for v in variables.values():
+    v['units'] = sorted(v['units'])
+    v['places'] = len(v['places'])
+  detail = {'mtime': mtime, 'meta': ds, 'source': src,
+            'variables': sorted(variables.values(), key=lambda v: v['name']),
+            'places': sorted(places.values(), key=lambda p: (-p['count'], p['name'])),
+            'observations': observations, 'place_names': names, 'var_names': var_names}
+  _datasets[dcid] = detail
+  return detail
+
+
+def dataset_csv(detail):
+  import csv
+  import io
+  out = io.StringIO()
+  w = csv.writer(out)
+  w.writerow(['place_dcid', 'place_name', 'variable_dcid', 'variable_name', 'date', 'value', 'unit'])
+  pn, vn = detail['place_names'], detail['var_names']
+  for place, var, date, value, unit in detail['observations']:
+    w.writerow([place, pn.get(place, place), var, vn.get(var, var), date, f'{value:g}', unit])
+  return out.getvalue()
+
+
 def _add_pages(static):
-  """/drilldown (templates/drilldown.html): a variable from the top place down through its sub-divisions.
-  /sitemap.xml and /robots.txt: let search engines find every dataset page (with its Croissant JSON-LD).
-  /data (the stock route) renders templates/data.html: every source and dataset of this instance."""
   from flask import Response
   from server.lib.render import render_page
 
@@ -327,7 +447,7 @@ def _add_pages(static):
     urls = [f'{SITE_URL}/', f'{SITE_URL}/data', f'{SITE_URL}/drilldown']
     for src in _json_file(CATALOG_FILE, {}).get('sources', []):
       for ds in src.get('datasets', []):
-        if ds.get('license'):          # only datasets with a Croissant payload are worth indexing as datasets
+        if ds.get('license'):
           urls.append(f"{SITE_URL}/browser/{ds['dcid']}")
     body = ''.join(f'<url><loc>{u}</loc></url>' for u in urls)
     return Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/'
@@ -336,6 +456,39 @@ def _add_pages(static):
   def robots():
     return Response(f'User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n', 200, mimetype='text/plain')
 
+  def place_search():
+    from flask import request
+    q = request.args.get('q', '')[:100]
+    try:
+      limit = max(1, min(int(request.args.get('limit', 8)), 20))
+    except ValueError:
+      limit = 8
+    found = [{k: p.get(k) for k in ('dcid', 'name', 'type', 'parent', 'level')} for p in search_places(q, limit)]
+    return Response(json.dumps({'places': found}), 200, mimetype='application/json',
+                    headers={'Cache-Control': 'public, max-age=3600'})
+
+  def dataset_page(dcid):
+    return render_page('static/data.html', 'dataset.html', dataset_dcid=dcid)
+
+  def dataset_api(dcid):
+    from flask import request
+    detail = dataset_detail(dcid)
+    if not detail:
+      return Response(json.dumps({'error': f'{dcid} is not a dataset in this Data Commons'}), 404,
+                      mimetype='application/json')
+    if request.args.get('format') == 'csv':
+      return Response(dataset_csv(detail), 200, mimetype='text/csv', headers={
+          'Content-Disposition': f'attachment; filename="{detail["meta"]["feed"]}.csv"'})
+    var = request.args.get('v')
+    if var:
+      body = {'variable': var, 'observations': [o for o in detail['observations'] if o[1] == var]}
+    else:
+      body = {k: detail[k] for k in ('meta', 'source', 'variables', 'places')}
+    return Response(json.dumps(body), 200, mimetype='application/json', headers={'Cache-Control': 'no-cache'})
+
+  static.bp.add_url_rule('/dataset/<path:dcid>', 'dcp_dataset', dataset_page)
+  static.bp.add_url_rule('/api/custom/dataset/<path:dcid>', 'dcp_dataset_api', dataset_api)
+  static.bp.add_url_rule('/api/custom/place-search', 'dcp_place_search', place_search)
   static.bp.add_url_rule('/drilldown', 'dcp_drilldown', drilldown)
   static.bp.add_url_rule('/sitemap.xml', 'dcp_sitemap', sitemap)
   static.bp.add_url_rule('/robots.txt', 'dcp_robots', robots)
@@ -343,7 +496,6 @@ def _add_pages(static):
   logging.info('custom.py: /drilldown, /sitemap.xml, /robots.txt added')
 
 
-# ---------------------------------------------------------------- Croissant 1.1 JSON-LD (backport)
 CROISSANT_CONTEXT = {
     "@language": "en", "@vocab": "https://schema.org/", "sc": "https://schema.org/",
     "cr": "http://mlcommons.org/croissant/", "rai": "http://mlcommons.org/croissant/RAI/",
@@ -369,9 +521,6 @@ def _first(props, name):
 
 
 def build_croissant(dcid):
-  """Croissant JSON-LD for a Dataset node, or {} (not a Dataset, or required fields missing). Same steps and
-  validation as upstream build_dataset_metadata; url/publisher point to this instance; adds sameAs (the
-  dataset's own landing page) and dateCreated (earliestDataImportDate), both recommended in the design doc."""
   import server.lib.fetch as fetch
   import server.services.datacommons as dc
 
@@ -406,7 +555,6 @@ def _croissant_for_dataset(dcid, props, fetch, dc):
   if _first(props, 'url'):
     doc["sameAs"] = _first(props, 'url')
 
-  # creator: the Source the Dataset isPartOf
   resp = dc.v2node([dcid], '->isPartOf')
   sources = ((((resp.get('data') or {}).get(dcid) or {}).get('arcs') or {}).get('isPartOf') or {}).get('nodes', [])
   if sources:
@@ -420,7 +568,6 @@ def _croissant_for_dataset(dcid, props, fetch, dc):
       doc["prov:wasAttributedTo"] = {"@id": s['dcid']}
     doc["creator"] = [creator]
 
-  # provenances that are part of this Dataset: datePublished, fallbacks, FileObject/RecordSet
   resp = dc.v2node([dcid], '<-isPartOf')
   provs = ((((resp.get('data') or {}).get(dcid) or {}).get('arcs') or {}).get('isPartOf') or {}).get('nodes', [])
   prov_ids = [p['dcid'] for p in provs if p.get('dcid')]
@@ -462,20 +609,17 @@ def _croissant_for_dataset(dcid, props, fetch, dc):
     doc["datePublished"] = refreshed
   if created:
     doc["dateCreated"] = created
-  if first_obs and last_obs:   # design doc (PDF, 2026-07-24): earliest/latestObservationDate -> temporalCoverage
+  if first_obs and last_obs:
     doc["temporalCoverage"] = f"{min(first_obs)}/{max(last_obs)}"
   if files:
     doc["distribution"], doc["recordSet"] = files, records
 
-  # keywords, spatialCoverage, variableMeasured: from the pipeline's catalogue (no graph property for them yet);
-  # they are what Google Dataset Search matches searches against
   extra = _json_file(EXTRA_FILE, {}).get(dcid) or {}
   for key in ('keywords', 'spatialCoverage', 'variableMeasured'):
     if extra.get(key):
       doc[key] = extra[key]
   doc["isAccessibleForFree"] = True
 
-  # upstream _validate_dataset
   desc = doc.get("description") or ""
   missing = [k for k in ("name", "url", "license", "datePublished", "creator") if not doc.get(k)]
   if missing or not 50 <= len(desc) <= 5000:
@@ -486,7 +630,6 @@ def _croissant_for_dataset(dcid, props, fetch, dc):
 
 
 def _add_croissant_route(static):
-  """/croissant/<dcid>: the JSON-LD alone (for mlcroissant, loaders, validators); 404 when not a valid Dataset."""
   from flask import Response
 
   def croissant(dcid):
@@ -500,9 +643,6 @@ def _add_croissant_route(static):
   logging.info('custom.py: /croissant/<dcid> added')
 
 
-# ---------------------------------------------------------------- search must not answer a different question
-# Stock search shows the closest variable even when nothing is close (cosine 0.5). Real questions score 0.82-1.0;
-# questions about data we do not have score ~0.55 ("ebola incidences in kenya" -> COVID vaccines).
 SEARCH_MIN_SCORE = float(os.environ.get('SEARCH_MIN_SCORE', '0.7'))
 
 
@@ -516,7 +656,6 @@ def _patch_search_threshold(params):
 
 
 def _no_match_message(data):
-  """detect-and-fulfill JSON with no variable matched: tell the user, instead of a silent place overview."""
   ctx = (data.get('context') or [{}])[-1] if isinstance(data.get('context'), list) else {}
   insight = ctx.get('insightCtx') or {}
   if insight.get('variables'):
@@ -534,19 +673,14 @@ def _no_match_message(data):
   return msg + ' The full list of datasets is on the Data sources page (/data).'
 
 
-# ---------------------------------------------------------------- place names the recogniser misses
-# Whole-word, case-insensitive; the right side is a name the stock recogniser resolves (checked on this instance).
 QUERY_PLACE_ALIASES = {
     'drc': 'democratic republic of the congo',
     'dr congo': 'democratic republic of the congo',
     'rdc': 'democratic republic of the congo',
-    # The recogniser knows neither "North Kivu" nor "Nord-Kivu": map straight to the place (dcid:...).
     'nord-kivu': 'dcid:wikidataId/Q130625', 'nord kivu': 'dcid:wikidataId/Q130625',
     'north kivu': 'dcid:wikidataId/Q130625',
     'sud-kivu': 'south kivu', 'sud kivu': 'south kivu',
     'ituri': 'ituri province',
-    # Zimbabwe: these names only mean the province (ZIMSTAT publishes by province). Harare, Bulawayo and Masvingo
-    # are also cities, so they are left to the recogniser ("Harare Province" finds the province data).
     'manicaland': 'manicaland province', 'midlands': 'midlands province',
     'mashonaland central': 'mashonaland central province', 'mashonaland east': 'mashonaland east province',
     'mashonaland west': 'mashonaland west province', 'matabeleland north': 'matabeleland north province',
@@ -560,7 +694,7 @@ def _patch_place_detection(place):
   stock = place.detect_from_query_dc
 
   def detect_from_query_dc(orig_query, debug_logs, *args, **kwargs):
-    forced = []  # (text in the query, dcid) for aliases that go straight to a place
+    forced = []
 
     def sub(m):
       target = QUERY_PLACE_ALIASES[m.group(1).lower()]
@@ -587,10 +721,7 @@ def _patch_place_detection(place):
   place.detect_from_query_dc = detect_from_query_dc
 
 
-# ---------------------------------------------------------------- "by country" charts for our own data
-# The search checks a sample of the first 15 child places before drawing "<variable> in countries of the World", so
-# data for a few countries only (Ebola in the DRC) never showed. Places that hold this instance's data go first.
-DATA_PLACES_FILE = '/workspace/server/dist/custom_dc/custom/data_places.json'  # from build_site_catalog.py
+DATA_PLACES_FILE = '/workspace/server/dist/custom_dc/custom/data_places.json'
 _data_places = None
 
 
@@ -619,7 +750,6 @@ def _patch_sample_child_places(nl_utils):
 
 
 def _patch_places_to_check(base):
-  """Same for explore answers ("ebola cases in the world"): fulfillment.base checks the first 15 child places."""
   stock = base.get_places_to_check
 
   def get_places_to_check(state, places):
@@ -641,9 +771,6 @@ def _patch_places_to_check(base):
   base.get_places_to_check = get_places_to_check
 
 
-# ---------------------------------------------------------------- questions that name no place
-# Most of this instance's variables cover one country (ZIMSTAT: Zimbabwe), so a question with no place that matches
-# one of them is answered for that country (site/static/var_home.json, written by build_site_catalog.py).
 VAR_HOME_FILE = '/workspace/server/dist/custom_dc/custom/var_home.json'
 _var_home = None
 
@@ -670,8 +797,6 @@ def _patch_context(context):
   context.merge_with_context = merge_with_context
 
 
-# ---------------------------------------------------------------- "today", "now", "this week" ...
-# Stock search returns a blank page for questions it classifies as Temporal; answer with the latest figures instead.
 def _patch_fulfiller(fulfiller):
   stock = fulfiller._perform_classification_checks
   from server.lib.nl.detection import types as dtypes
@@ -687,8 +812,6 @@ def _patch_fulfiller(fulfiller):
 
 
 def _patch_responses():
-  """HTML responses: remove the Google Maps script when there is no key; add the Croissant JSON-LD to
-  /browser/<dataset> pages (in <head>, where crawlers look for it)."""
   import flask
   stock = flask.Flask.process_response
   if getattr(stock, '_dcp', False):
@@ -699,7 +822,6 @@ def _patch_responses():
     try:
       if (response.mimetype == 'application/json' and response.status_code == 200 and
           (flask.request.path.startswith('/api/place/related-places/') or flask.request.path == '/api/place/parent')):
-        # Parent places top-down ("World › Africa", not "Africa, World"): stock lists them nearest first.
         data = json.loads(response.get_data())
         if isinstance(data, list):
           data = data[::-1]
@@ -742,10 +864,10 @@ def _patch_responses():
   flask.Flask.process_response = process_response
 
 
-# Module -> patch, applied when the module is first imported (the routes cannot be imported here: circular imports).
 _PATCHES = {
     'server.routes.explore.helpers': (_patch_default_place, 'set World as the default search place'),
-    'server.routes.static': (_add_pages, 'add /drilldown, /sitemap.xml, /robots.txt, /croissant/<dcid>'),
+    'server.routes.static': (_add_pages, 'add /drilldown, /sitemap.xml, /robots.txt, /croissant/<dcid>, '
+                             '/api/custom/place-search'),
     'server.routes.shared_api.autocomplete.stat_vars': (_patch_stat_var_autocomplete,
                                                         'serve indicator suggestions locally'),
     'server.lib.nl.explore.params': (_patch_search_threshold, 'raise the search match threshold'),
@@ -760,7 +882,8 @@ if LOCAL_PLACE_SEARCH:
   _PATCHES['server.routes.shared_api.autocomplete.helpers'] = (_patch_autocomplete,
                                                                'serve autocomplete places locally')
 _patch_responses()
-_DEFERRED = []  # modules still loading when this file runs (circular imports): patched on the first request
+_preload_world()
+_DEFERRED = []
 
 
 def _apply(name, patch, what):
@@ -771,7 +894,7 @@ def _apply(name, patch, what):
     logging.exception('custom.py: could not %s', what)
 
 
-for _name in [n for n in _PATCHES if n in sys.modules]:  # already imported: patch now (or once it has loaded)
+for _name in [n for n in _PATCHES if n in sys.modules]:
   _patch, _what = _PATCHES.pop(_name)
   if getattr(getattr(sys.modules[_name], '__spec__', None), '_initializing', False):
     _DEFERRED.append((_name, _patch, _what))
@@ -808,7 +931,7 @@ class _PatchOnImport(importlib.abc.MetaPathFinder):
       stock_exec(module)
       try:
         patch(module)
-      except Exception:  # never stop the site over a customization; the stock behaviour stays
+      except Exception:
         logging.exception('custom.py: could not %s', what)
 
     spec.loader.exec_module = exec_module

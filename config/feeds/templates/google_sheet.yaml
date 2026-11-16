@@ -1,23 +1,14 @@
-# TEMPLATE: a Google Sheet that people keep editing. Copy to config/feeds/<feed_id>.yaml (feed_id: lowercase
-# letters, digits, _), fill in, and set enabled: true. Files in this templates/ folder are never loaded.
-#
-# Share the sheet as "Anyone with the link: Viewer" (or File > Share > Publish to the web), otherwise the
-# nightly run gets a Google login page and rejects the feed with "sheet is not shared publicly".
-# sheet_id = the long id in the sheet URL: https://docs.google.com/spreadsheets/d/<sheet_id>/edit#gid=<gid>
-# gid      = the number after #gid= in the URL of the tab to read; leave it out to read the first tab.
-
 enabled: false
-source: MyOrganisation             # add it to config/sources.yaml first
+source: MyOrganisation
 
 dataset:
   name: "Official title of the dataset"
   description: >-
     50 to 5000 characters, factual: what is measured, for which places and years, how it is collected,
     and by whom. Shown on the dataset page and indexed by Google Dataset Search.
-  url: "https://example.org/the-dataset-landing-page"      # canonical landing page, https
-  license: "https://creativecommons.org/licenses/by/4.0/"   # licence URL that explicitly applies to this data
+  url: "https://example.org/the-dataset-landing-page"
+  license: "https://creativecommons.org/licenses/by/4.0/"
   license_evidence: "where the licence is stated (URL or document)"
-  # citation: "only an official citation given by the publisher"
 
 provenance:
   name: "Short name shown as the source of each number"
@@ -25,28 +16,21 @@ provenance:
 fetch:
   type: google_sheet
   sheet_id: "1AbC...your-sheet-id..."
-  # gid: 123456789                 # tab to read (default: the first tab)
-  # header_row: 1                  # row holding the column names (default 1)
 
-# Long layout (one row per number), e.g.
-#   Country | Year | Indicator           | Value
-#   Kenya   | 2023 | Maize production    | 3400000
 mapping:
-  place: {column: Country, match: name}       # match: auto | name | iso3 | dcid
-  date: {column: Year}                        # 2023, 2023-06 or 2023-06-30
+  place: {column: Country, match: name}
+  date: {column: Year}
   variable_column: Indicator
   value_column: Value
-  variables_map:                              # label in the sheet -> variable key below
+  variables_map:
     "Maize production": maize_production
-  # filters: {Sex: Total}                     # keep only rows with these values
-  # missing: ["", "..", "-", "NA"]            # cells that mean "no value" (these are the defaults, plus a few more)
 
 variables:
   maize_production:
     name: "Maize production"
     description: "Quantity of maize harvested in the calendar year, in tonnes."
     group: "Agriculture"
-    population_type: Thing                    # Data Commons populationType (Person, Household, Thing, ...)
+    population_type: Thing
     unit: {key: Tonnes, name: "Tonnes", description: "Metric tonnes (1,000 kg)."}
     min: 0
     max: 1000000000

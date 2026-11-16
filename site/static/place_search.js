@@ -1,21 +1,8 @@
-/**
- * Place search without Google Maps.
- *
- * The stock Data Commons place boxes ("Enter a place" in Map / Timelines / Scatter, the place page search,
- * the search page) are built on Google Places Autocomplete and need a real Google Maps key. Without one they
- * show errors and find no places. This file provides the small part of the google.maps.places API those
- * boxes use (Autocomplete, AutocompleteService, PlacesService, PlacesServiceStatus), answered from this
- * site's own place index (places.json: World, continents, sub-regions, countries). Suggestions are drawn in
- * the same .pac-container / .pac-item markup as Google's, so the stock styles and code keep working.
- *
- * Place ids are "dcid:<dcid>"; custom.py makes /api/place/placeid2dcid return the dcid for them.
- * Loaded from templates/base.html only when no real Google Maps key is configured (LOCAL_PLACE_SEARCH);
- * custom.py then also drops the Google Maps script tag from pages.
- */
 (function () {
   "use strict";
   var INDEX_URL = "/custom_dc/custom/places.json";
-  var MAX_RESULTS = 6;
+  var SEARCH_URL = "/api/custom/place-search?limit=8&q=";
+  var MAX_RESULTS = 8;
   var PREFIX = "dcid:";
 
   var indexPromise = null;
@@ -40,7 +27,6 @@
       .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   }
 
-  // Lower is better: exact name, then name prefix, then a word prefix, then anywhere in the name.
   function score(p, q) {
     var best = 99;
     p._keys.forEach(function (k, i) {
@@ -66,8 +52,38 @@
       .map(function (x) { return x.p; });
   }
 
-  // The place name only: the hierarchy (top-down, "World › Africa › Eastern Africa") is shown beside it.
+  var remoteCache = {};
+  function remoteSearch(input) {
+    var q = norm(input);
+    if (q.length < 2) return Promise.resolve(null);
+    if (!remoteCache[q]) {
+      remoteCache[q] = fetch(SEARCH_URL + encodeURIComponent(q))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { return d && d.places ? d.places : null; })
+        .catch(function () { delete remoteCache[q]; return null; });
+    }
+    return remoteCache[q];
+  }
+
+  function merged(places, input) {
+    var local = search(places, input);
+    return remoteSearch(input).then(function (remote) {
+      if (!remote) return local;
+      var seen = {}, out = [];
+      remote.concat(local).forEach(function (p) {
+        if (!seen[p.dcid] && out.length < MAX_RESULTS) { seen[p.dcid] = true; out.push(p); }
+      });
+      return out;
+    });
+  }
+
   function description(p) { return p.name; }
+
+  var TYPE_LABELS = {
+    AdministrativeArea1: "State / province", AdministrativeArea2: "District / county",
+    AdministrativeArea3: "Sub-district", City: "City", Country: "Country", Continent: "Continent", Region: "Region",
+  };
+  function typeLabel(t) { return TYPE_LABELS[t] || ""; }
 
   function prediction(p) {
     return {
@@ -85,7 +101,9 @@
   function AutocompleteService() {}
   AutocompleteService.prototype.getPlacePredictions = function (req, cb) {
     var p = loadIndex().then(function (places) {
-      var found = search(places, req && req.input).map(prediction);
+      return merged(places, req && req.input);
+    }).then(function (list) {
+      var found = list.map(prediction);
       var status = found.length ? PlacesServiceStatus.OK : PlacesServiceStatus.ZERO_RESULTS;
       if (cb) cb(found, status);
       return { predictions: found };
@@ -96,7 +114,9 @@
   function PlacesService() {}
   PlacesService.prototype.findPlaceFromQuery = function (req, cb) {
     loadIndex().then(function (places) {
-      var found = search(places, req && req.query).slice(0, 1).map(function (p) {
+      return merged(places, req && req.query);
+    }).then(function (list) {
+      var found = list.slice(0, 1).map(function (p) {
         return { place_id: PREFIX + p.dcid, name: p.name, types: ["political"] };
       });
       cb(found, found.length ? PlacesServiceStatus.OK : PlacesServiceStatus.ZERO_RESULTS);
@@ -104,7 +124,6 @@
   };
   PlacesService.prototype.textSearch = PlacesService.prototype.findPlaceFromQuery;
 
-  /** Autocomplete attached to an <input>, drawing Google-style suggestions under it. */
   function Autocomplete(input, opts) {
     this.input = input;
     this.listeners = [];
@@ -117,6 +136,9 @@
     this.list = document.createElement("div");
     this.box.appendChild(this.list);
     document.body.appendChild(this.box);
+    this.sink = document.createElement("div");
+    this.sink.className = "pac-container gdc-pac-sink";
+    document.body.appendChild(this.sink);
     input.setAttribute("autocomplete", "off");
 
     var self = this;
@@ -145,23 +167,36 @@
     var self = this;
     var value = this.input.value;
     loadIndex().then(function (places) {
-      if (self.input.value !== value) return; // a newer keystroke is on its way
+      if (self.input.value !== value) return;
       self.items = search(places, value);
       self.active = -1;
+      self.pending = norm(value).length >= 2;
+      self.render();
+      return merged(places, value);
+    }).then(function (list) {
+      if (!list || self.input.value !== value) return;
+      var keep = self.active >= 0 && self.items[self.active] ? self.items[self.active].dcid : null;
+      self.items = list;
+      self.pending = false;
+      self.active = -1;
+      list.forEach(function (p, i) { if (p.dcid === keep) self.active = i; });
       self.render();
     });
   };
 
   Autocomplete.prototype.render = function () {
     var self = this;
-    // The stock place bar may draw its own result into the last .pac-container; keep our list attached.
     if (this.list.parentNode !== this.box) this.box.appendChild(this.list);
     this.list.innerHTML = "";
     if (!this.items.length) {
+      if (this.pending) {
+        this.hide();
+        return;
+      }
       if (this.input.value.trim().length >= 2) {
         var none = document.createElement("div");
         none.className = "pac-item gdc-pac-empty";
-        none.textContent = "No matching country or region in this Data Commons";
+        none.textContent = "No matching place";
         this.list.appendChild(none);
         this.show();
       } else {
@@ -183,7 +218,7 @@
       row.appendChild(icon);
       row.appendChild(main);
       var sub = document.createElement("span");
-      sub.textContent = p.parent ? p.parent : p.type;
+      sub.textContent = [typeLabel(p.type), p.parent].filter(Boolean).join(" · ");
       row.appendChild(sub);
       row.addEventListener("mousedown", function (e) { e.preventDefault(); self.select(i); });
       row.addEventListener("mouseenter", function () { self.active = i; self.highlight(); });

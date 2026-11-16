@@ -1,11 +1,3 @@
-# Extra place names and codes -> Data Commons dcids.
-#
-# Places are matched in this order: these aliases, the built-in gazetteer (World, continents, UN M49 sub-regions,
-# 215 countries with ISO3 codes and common alternative names: automation/src/data/places_base.json), then the
-# Data Commons resolve API (needs DC_API_KEY; results are cached in local_store/state/place_cache.json).
-# Add a line here when a feed uses a spelling or code that is not recognised (the run report lists them).
-# Matching ignores case, accents and punctuation.
-
 aliases:
-  OWID_WRL: Earth          # Our World in Data's code for the World
-  WLD: Earth               # World Bank's code for the World
+  OWID_WRL: Earth
+  WLD: Earth

@@ -1,7 +1,3 @@
-{#- DataCommon Project: /data (stock route; datacommons.org lists its own sources there). Lists every source of this
-    instance and its datasets from static/catalog.json (regenerated after every run by
-    automation/src/build_site_catalog.py), each with links to its Data Commons dataset page, the original publisher's
-    page, the raw data and the Croissant JSON-LD. -#}
 {%- extends BASE_HTML -%}
 {% set main_id = 'data-sources' %}
 {% set page_id = 'page-data-sources' %}
@@ -22,6 +18,9 @@
   #dcp-data .links a { margin-right: 14px; font-size: .88rem; }
   #dcp-data .pending { color: #a50e0e; }
   #dcp-data .count { color: #5f6368; font-size: .9rem; }
+  #dcp-data .topic { display: inline-flex; align-items: center; gap: 8px; margin: -12px 0 16px; padding: 6px 8px 6px 14px;
+    border-radius: 18px; background: #e8f0fe; color: #0751b3; font-size: .92rem; }
+  #dcp-data .topic button { border: 0; background: none; color: inherit; cursor: pointer; font-size: 1.1rem; line-height: 1; }
 </style>
 {% endblock %}
 {% block content %}
@@ -30,6 +29,7 @@
   <p class="lead">Every dataset in this Data Commons, with the organisation that publishes it. Each number on the
     site links back to its dataset; each dataset links to the publisher's own page and data.</p>
   <input id="dcp-filter" type="search" placeholder="Filter by dataset, source or acronym (e.g. ZIMSTAT, KNBS, population)">
+  <div id="dcp-topic" class="topic" hidden><span></span><button type="button" aria-label="Show all datasets">×</button></div>
   <div id="dcp-count" class="count"></div>
   <div id="dcp-list">Loading…</div>
 </div>
@@ -37,6 +37,16 @@
 (function () {
   var list = document.getElementById('dcp-list'), filter = document.getElementById('dcp-filter');
   var data = null;
+  var params = new URLSearchParams(location.search), topicTerms = [];
+  var chip = document.getElementById('dcp-topic');
+  if (params.get('terms')) {
+    topicTerms = params.get('terms').split('|').map(function (t) { return norm(t); }).filter(Boolean);
+    chip.querySelector('span').textContent = 'Topic: ' + (params.get('topic') || params.get('terms'));
+    chip.hidden = false;
+  }
+  chip.querySelector('button').addEventListener('click', function () {
+    topicTerms = []; chip.hidden = true; history.replaceState(null, '', location.pathname); if (data) render();
+  });
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
     return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
   function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -46,8 +56,11 @@
     data.sources.forEach(function (s) {
       var srcKey = norm([s.name].concat(s.aliases).join(' '));
       var rows = s.datasets.filter(function (d) {
+        if (!d.license) return false;
         total++;
-        return !q || srcKey.indexOf(q) >= 0 || norm(d.name + ' ' + d.description).indexOf(q) >= 0;
+        var text = norm(d.name + ' ' + d.description);
+        if (topicTerms.length && !topicTerms.some(function (t) { return text.indexOf(t) >= 0; })) return false;
+        return !q || srcKey.indexOf(q) >= 0 || text.indexOf(q) >= 0;
       });
       if (!rows.length) return;
       shown += rows.length;
@@ -57,18 +70,19 @@
       rows.forEach(function (d) {
         var explore = d.example_variable ? '/drilldown?v=' + encodeURIComponent(d.example_variable) +
           (d.example_place ? '&place=' + encodeURIComponent(d.example_place) : '') : null;
-        html.push('<div class="ds"><h3><a href="/browser/' + esc(d.dcid) + '">' + esc(d.name) + '</a></h3>' +
+        html.push('<div class="ds"><h3><a href="/dataset/' + esc(d.dcid) + '">' + esc(d.name) + '</a></h3>' +
           '<p>' + esc(d.description) + '</p>' +
           '<div class="meta">' + d.rows.toLocaleString() + ' values · ' + d.places + ' place(s) · ' + d.variables +
           ' variable(s) · ' + esc(d.first_date) + '–' + esc(d.last_date) + ' · updated ' + esc(d.refreshed || '') +
-          ' · licence: ' + (d.license ? '<a href="' + esc(d.license) + '" target="_blank" rel="noopener">' +
-          esc(d.license.replace(/^https?:\/\//, '')) + '</a>' : '<span class="pending">not confirmed yet</span>') +
+          ' · licence: <a href="' + esc(d.license) + '" target="_blank" rel="noopener">' +
+          esc(d.license.replace(/^https?:\/\//, '')) + '</a>' +
           '</div><div class="links">' +
-          '<a href="/browser/' + esc(d.dcid) + '">Dataset page</a>' +
+          '<a href="/dataset/' + esc(d.dcid) + '">View data</a>' +
+          '<a href="/browser/' + esc(d.dcid) + '">Knowledge graph</a>' +
           (d.url ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener">Original source ↗</a>' : '') +
           (d.data_url ? '<a href="' + esc(d.data_url) + '" target="_blank" rel="noopener">Raw data ↗</a>' : '') +
           (explore ? '<a href="' + explore + '">Explore by place</a>' : '') +
-          (d.license ? '<a href="/croissant/' + esc(d.dcid) + '">Croissant JSON-LD</a>' : '') +
+          '<a href="/croissant/' + esc(d.dcid) + '">Croissant JSON-LD</a>' +
           '</div></div>');
       });
     });
