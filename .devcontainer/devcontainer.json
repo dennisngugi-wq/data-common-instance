@@ -1,0 +1,27 @@
+{
+  "name": "DataCommon Project",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "32gb"
+  },
+  "secrets": {
+    "DC_API_KEY": {
+      "description": "Free Data Commons API key from https://apikeys.datacommons.org",
+      "documentationUrl": "https://apikeys.datacommons.org"
+    }
+  },
+  "forwardPorts": [8090],
+  "portsAttributes": {
+    "8090": {
+      "label": "DataCommon Project site",
+      "onAutoForward": "notify"
+    }
+  },
+  "postStartCommand": "bash .devcontainer/start.sh"
+}

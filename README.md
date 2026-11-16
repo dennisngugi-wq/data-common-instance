@@ -59,6 +59,20 @@ Notes for a fresh clone:
   always use Docker Engine, and `docker context use default` switches your terminal back.
 - Port 8090 already taken? Set `SITE_PORT` in `.env`.
 
+## Share it from GitHub Codespaces
+
+A public link to a running copy of the site, without a server of your own:
+
+1. Once: repository **Settings > Secrets and variables > Codespaces > New repository secret**, name `DC_API_KEY`,
+   value your Data Commons API key.
+2. **Code > Codespaces > Create codespace** on this branch (it asks for a 4-core / 16 GB machine). The site starts by
+   itself; the first load takes 20-40 minutes (`tail -f logs/pipeline.log`).
+3. **Ports** tab > port **8090** > right-click > **Port visibility > Public**, then share its address
+   (`https://<codespace-name>-8090.app.github.dev`).
+
+The codespace stops after 30 minutes without activity (the link stops working until it is started again) and uses
+your Codespaces hours (free allowance, then paid). For an always-on link, deploy to a server.
+
 ## Everyday commands
 
 The site and the nightly refresh start by themselves when the computer boots (Docker Engine is enabled and the
