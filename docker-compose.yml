@@ -21,6 +21,7 @@ services:
       - ${HOST_PROJECT_DIR}/local_dc_db:/out
       - ${HOST_PROJECT_DIR}/site/app_env/custom.py:/workspace/server/app_env/custom.py:ro
       - ${HOST_PROJECT_DIR}/site/templates:/workspace/server/templates/custom_dc/custom:ro
+      - ${HOST_PROJECT_DIR}/site/templates_core/explore_landing.html:/workspace/server/templates/explore_landing.html:ro
       - ${HOST_PROJECT_DIR}/site/static:/workspace/server/dist/custom_dc/custom:ro
       - ${HOST_PROJECT_DIR}/site/data:/workspace/custom_data:ro
       - ${HOST_PROJECT_DIR}/config/instance.yaml:/workspace/instance.yaml:ro
@@ -29,6 +30,7 @@ services:
       - ${HOST_PROJECT_DIR}/site/config/home_page/topics.json:/workspace/server/config/home_page/topics.json:ro
       - ${HOST_PROJECT_DIR}/site/config/feature_flags/custom.json:/workspace/server/config/feature_flag_configs/custom.json:ro
       - ${HOST_PROJECT_DIR}/site/config/header.json:/workspace/server/config/custom_dc/custom/base/header.json:ro
+      - ${HOST_PROJECT_DIR}/site/config/footer.json:/workspace/server/config/base/footer.json:ro
     ports:
       - "${SITE_PORT:-8090}:8080"
     restart: unless-stopped

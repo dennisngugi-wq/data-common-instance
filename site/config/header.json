@@ -8,21 +8,6 @@
     },
     "primarySectionGroups": [
       {
-        "id": "tools-dcp",
-        "items": [
-          {
-            "title": "Explore by place",
-            "url": "/drilldown",
-            "description": "Follow an indicator from the continent to countries, provinces, counties and districts"
-          },
-          {
-            "title": "Data sources",
-            "url": "/data",
-            "description": "Every dataset in this Data Commons, with links to the original publisher"
-          }
-        ]
-      },
-      {
         "id": "tools-0",
         "items": [
           {

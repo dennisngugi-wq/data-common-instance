@@ -1,0 +1,84 @@
+{
+  "default": {
+    "questions": ["Show me the data for Kenya", "Show me the data for the world"],
+    "compare": ["Compare data for Kenya and Nigeria"],
+    "charts": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live."
+  },
+  "economics": {
+    "questions": [
+      "Tell me about the economy of Kenya",
+      "GDP per capita in Africa",
+      "Inflation in Nigeria",
+      "What is the GDP of countries in the world?"
+    ],
+    "compare": [
+      "Which countries in Africa have the highest GDP?",
+      "Compare GDP in Kenya, Nigeria and Ethiopia",
+      "Countries with the highest external debt",
+      "How does debt correlate with GDP for countries in Africa?"
+    ],
+    "charts": [],
+    "emptyMessage": "Only datasets whose publisher explicitly states a licence are loaded (Croissant rule C4), so GDP, inflation, employment and debt are not shown here until a licensed source is added."
+  },
+  "demographics": {
+    "questions": [
+      "Population of Kenya",
+      "Population of Nigeria",
+      "Population of the world",
+      "Population of countries in Africa"
+    ],
+    "compare": [
+      "Which country in Africa has the most people?",
+      "Population of continents",
+      "Compare the population of Kenya and Nigeria",
+      "How has the population of the world changed over time?"
+    ],
+    "charts": [
+      {
+        "type": "line",
+        "title": "Total population by continent",
+        "variables": "Count_Person",
+        "places": "Earth africa asia europe northamerica southamerica oceania"
+      }
+    ]
+  },
+  "environment": {
+    "questions": [
+      "CO2 emissions per capita in Kenya",
+      "CO2 emissions per capita in the world",
+      "CO2 emissions per capita of countries in Africa",
+      "Highest CO2 emitters in the world"
+    ],
+    "compare": [
+      "Countries with the highest CO2 emissions per capita",
+      "Compare CO2 emissions per capita in Kenya and Nigeria",
+      "How have CO2 emissions per capita changed in Kenya?",
+      "CO2 emissions per capita in the world over time"
+    ],
+    "charts": [
+      {
+        "type": "map",
+        "title": "CO2 emissions per capita by country (tonnes per person)",
+        "variable": "Amount_Emissions_CarbonDioxide_PerCapita",
+        "parentPlace": "Earth"
+      },
+      {
+        "type": "line",
+        "title": "CO2 emissions per capita in the world",
+        "variables": "Amount_Emissions_CarbonDioxide_PerCapita",
+        "places": "Earth"
+      }
+    ]
+  },
+  "health": {
+    "questions": ["Mortality rate in Kenya", "Health data for Zimbabwe"],
+    "compare": ["How has mortality changed in Kenya?"],
+    "charts": []
+  },
+  "education": {
+    "questions": ["School enrolment in Kenya", "Literacy rate in Nigeria"],
+    "compare": ["How has school enrolment changed in Kenya?"],
+    "charts": []
+  }
+}

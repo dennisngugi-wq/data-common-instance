@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import sys
+import urllib.parse
 from pathlib import Path
 
 import croissant
@@ -15,6 +16,28 @@ import topics as topics_mod
 from storage import LocalStore
 
 PREFERRED = ["country/KEN", "country/NGA", "country/ETH", "country/EGY", "country/ZWE", "Earth"]
+
+# Curated topic pages: lead text, sub-topics, example questions and chart layouts live in this file so a
+# refresh only has to fill in the indicators that are actually loaded (never invented data).
+CONTENT_FILE = settings.PROJECT_ROOT / "config" / "topics_content.json"
+EXPLORE_SLUGS = {"economy": "economics"}
+TITLES = {**topics_mod.TITLES, "economics": "Economics"}
+ICONS = {**topics_mod.ICONS, "economics": "account_balance"}
+TOPIC_IMAGES = {
+    "economics": "/images/explore_landing/topic-economics.svg",
+    "demographics": "/images/explore_landing/topic-demographics.svg",
+    "education": "/images/explore_landing/topic-education.svg",
+    "health": "/images/explore_landing/topic-health.svg",
+    "environment": "/images/explore_landing/topic-sustainability.svg",
+    "energy": "/images/explore_landing/topic-sustainability.svg",
+}
+
+
+def _json(path, default):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return default
 
 
 def questions(store_dir):
@@ -45,20 +68,122 @@ def questions(store_dir):
     return out[:6]
 
 
+def _count_label(n):
+    """datacommons.org styles big variable counts as 67.5K; keep small counts exact."""
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M".rstrip("0").rstrip(".")
+    if n >= 1000:
+        return f"{n / 1000:.1f}".rstrip("0").rstrip(".") + "K"
+    return str(n)
+
+
+def _source_spans(names):
+    """'A, B, and C' as <span> pieces, matching the datacommons.org explore paragraph."""
+    if not names:
+        return ""
+    parts = []
+    for i, name in enumerate(names):
+        if len(names) == 1:
+            parts.append(f"<span>{name}</span>")
+        elif i == len(names) - 1:
+            parts.append(f"<span>and {name}</span>")
+        else:
+            parts.append(f"<span>{name}, </span>")
+    return "".join(parts)
+
+
+def _intro(slug, title, var_count, source_names, empty_message):
+    sources = _source_spans(source_names)
+    if var_count > 0:
+        plural = "" if var_count == 1 else "s"
+        return (f"Our {title.lower()} data spans over <strong title=\"{var_count:,}\">{_count_label(var_count)}</strong> "
+                f"statistical variable{plural}. We collect our {title.lower()} information from sources such as: {sources}.")
+    msg = empty_message or "No licensed datasets are loaded for this topic yet."
+    tail = f" The data loaded in this Data Commons comes from sources such as: {sources}." if sources else ""
+    return (f"Our {title.lower()} data does not yet include statistical variables from a licensed source. "
+            f"{msg}{tail}")
+
+
 def topics(catalog_path):
-    try:
-        catalog = json.loads(Path(catalog_path).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
-    counts = {}
+    """Topic pages for /explore/<topic>, with only the indicators this instance actually has."""
+    catalog = _json(catalog_path, {})
+    content = _json(CONTENT_FILE, {})
+    default = content.get("default", {})
+    variables = _json(settings.PROJECT_ROOT / "site" / "static" / "variables.json", {})
+    var_names = {d: n for d, n, _ in variables.get("variables", [])}
+    source_names = [s.get("name", "") for s in variables.get("sources", [])]
+
+    counts, indicators, var_counts, topic_sources = {}, {}, {}, {}
     for s in catalog.get("sources", []):
         for d in s.get("datasets", []):
             for slug in d.get("topics", []):
                 counts[slug] = counts.get(slug, 0) + 1
-    return [{"id": slug, "title": topics_mod.TITLES[slug],
-             "description": f"{counts[slug]} dataset{'s' if counts[slug] != 1 else ''}",
-             "url": f"/data/{slug}", "browseUrl": f"/data/{slug}", "icon": topics_mod.ICONS[slug]}
-            for slug in topics_mod.ORDER if slug in counts]
+                var_counts[slug] = var_counts.get(slug, 0) + int(d.get("variables") or 0)
+                topic_sources.setdefault(slug, set()).add(s.get("name", ""))
+                dcid = d.get("example_variable")
+                if dcid in var_names:
+                    indicators.setdefault(slug, []).append({
+                        "dcid": dcid, "name": var_names[dcid], "source": s.get("name", ""),
+                        "dataset": d.get("dcid", ""),
+                    })
+
+    # datacommons.org calls the topic "economics"; our catalog calls it "economy". One page, one slug.
+    if "economy" in counts:
+        counts["economics"] = counts.pop("economy") + counts.get("economics", 0)
+        var_counts["economics"] = var_counts.pop("economy", 0) + var_counts.get("economics", 0)
+        indicators["economics"] = indicators.pop("economy", []) + indicators.get("economics", [])
+        topic_sources["economics"] = topic_sources.pop("economy", set()) | topic_sources.get("economics", set())
+
+    order = ["economics"] + [EXPLORE_SLUGS.get(s, s) for s in topics_mod.ORDER
+                             if EXPLORE_SLUGS.get(s, s) != "economics"]
+    slugs = [s for s in order if s == "economics" or s in counts]
+    slugs += sorted(set(counts) - set(slugs))
+
+    out = []
+    for slug in slugs:
+        c = content.get(slug, default)
+        live = indicators.get(slug, [])
+        live_dcids = {i["dcid"] for i in live}
+        charts = []
+        for chart in c.get("charts", []):
+            used = [chart.get("variable")] + str(chart.get("variables", "")).split()
+            used = [u for u in used if u]
+            if used and all(u in live_dcids for u in used):
+                charts.append(chart)
+        n = counts.get(slug, 0)
+        title = TITLES.get(slug, c.get("title", slug.title()))
+        # Visualization-tool chips, datacommons.org style, one per live variable in this topic.
+        seen, vis_chips = set(), []
+        for i in live:
+            if i["dcid"] in seen:
+                continue
+            seen.add(i["dcid"])
+            fragment = urllib.parse.quote_plus(
+                f'visType=timeline&place=Earth&placeType=Country&sv={json.dumps({"dcid": i["dcid"]})}')
+            vis_chips.append({"label": f"{i['name']} in the world",
+                              "url": f"/tools/visualization#{fragment}"})
+        src_names = sorted(s for s in topic_sources.get(slug, set()) if s)
+        out.append({
+            "id": slug, "title": title,
+            "description": (f"{n} dataset{'s' if n != 1 else ''}" if n else "No licensed indicators yet"),
+            "url": f"/explore/{slug}", "browseUrl": f"/explore/{slug}",
+            "icon": ICONS.get(slug, "category"),
+            "image": c.get("image", TOPIC_IMAGES.get(slug, "/images/explore_landing/topic-equity.svg")),
+            "lead": c.get("lead", default.get("lead", "")),
+            "subTopics": c.get("subTopics", []),
+            "examples": c.get("examples", []),
+            "charts": charts,
+            "indicators": live,
+            "emptyMessage": c.get("emptyMessage", default.get("emptyMessage", "")),
+            # datacommons.org explore-page structure
+            "varCount": var_counts.get(slug, 0),
+            "introHtml": _intro(slug, title, var_counts.get(slug, 0), src_names,
+                                c.get("emptyMessage", default.get("emptyMessage", ""))),
+            "questions": c.get("questions", default.get("questions", [])),
+            "compare": c.get("compare", default.get("compare", [])),
+            "visChips": vis_chips,
+        })
+    return out
 
 
 def _write(path, obj):

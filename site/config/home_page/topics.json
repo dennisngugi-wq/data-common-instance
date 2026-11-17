@@ -1,18 +1,136 @@
 [
   {
+    "id": "economics",
+    "title": "Economics",
+    "description": "No licensed indicators yet",
+    "url": "/explore/economics",
+    "browseUrl": "/explore/economics",
+    "icon": "account_balance",
+    "image": "/images/explore_landing/topic-economics.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "Only datasets whose publisher explicitly states a licence are loaded (Croissant rule C4), so GDP, inflation, employment and debt are not shown here until a licensed source is added.",
+    "varCount": 0,
+    "introHtml": "Our economics data does not yet include statistical variables from a licensed source. Only datasets whose publisher explicitly states a licence are loaded (Croissant rule C4), so GDP, inflation, employment and debt are not shown here until a licensed source is added.",
+    "questions": [
+      "Tell me about the economy of Kenya",
+      "GDP per capita in Africa",
+      "Inflation in Nigeria",
+      "What is the GDP of countries in the world?"
+    ],
+    "compare": [
+      "Which countries in Africa have the highest GDP?",
+      "Compare GDP in Kenya, Nigeria and Ethiopia",
+      "Countries with the highest external debt",
+      "How does debt correlate with GDP for countries in Africa?"
+    ],
+    "visChips": []
+  },
+  {
     "id": "demographics",
     "title": "Demographics",
     "description": "1 dataset",
-    "url": "/data/demographics",
-    "browseUrl": "/data/demographics",
-    "icon": "family_restroom"
+    "url": "/explore/demographics",
+    "browseUrl": "/explore/demographics",
+    "icon": "family_restroom",
+    "image": "/images/explore_landing/topic-demographics.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [
+      {
+        "type": "line",
+        "title": "Total population by continent",
+        "variables": "Count_Person",
+        "places": "Earth africa asia europe northamerica southamerica oceania"
+      }
+    ],
+    "indicators": [
+      {
+        "dcid": "Count_Person",
+        "name": "Total population",
+        "source": "World Bank",
+        "dataset": "dc/d/WorldBank_WorldDevelopmentIndicators"
+      }
+    ],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 1,
+    "introHtml": "Our demographics data spans over <strong title=\"1\">1</strong> statistical variable. We collect our demographics information from sources such as: <span>World Bank</span>.",
+    "questions": [
+      "Population of Kenya",
+      "Population of Nigeria",
+      "Population of the world",
+      "Population of countries in Africa"
+    ],
+    "compare": [
+      "Which country in Africa has the most people?",
+      "Population of continents",
+      "Compare the population of Kenya and Nigeria",
+      "How has the population of the world changed over time?"
+    ],
+    "visChips": [
+      {
+        "label": "Total population in the world",
+        "url": "/tools/visualization#visType%3Dtimeline%26place%3DEarth%26placeType%3DCountry%26sv%3D%7B%22dcid%22%3A+%22Count_Person%22%7D"
+      }
+    ]
   },
   {
     "id": "environment",
     "title": "Environment",
     "description": "1 dataset",
-    "url": "/data/environment",
-    "browseUrl": "/data/environment",
-    "icon": "eco"
+    "url": "/explore/environment",
+    "browseUrl": "/explore/environment",
+    "icon": "eco",
+    "image": "/images/explore_landing/topic-sustainability.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [
+      {
+        "type": "map",
+        "title": "CO2 emissions per capita by country (tonnes per person)",
+        "variable": "Amount_Emissions_CarbonDioxide_PerCapita",
+        "parentPlace": "Earth"
+      },
+      {
+        "type": "line",
+        "title": "CO2 emissions per capita in the world",
+        "variables": "Amount_Emissions_CarbonDioxide_PerCapita",
+        "places": "Earth"
+      }
+    ],
+    "indicators": [
+      {
+        "dcid": "Amount_Emissions_CarbonDioxide_PerCapita",
+        "name": "CO2 emissions per capita",
+        "source": "Our World in Data",
+        "dataset": "DCProjectDataset_owid_co2_per_capita"
+      }
+    ],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 1,
+    "introHtml": "Our environment data spans over <strong title=\"1\">1</strong> statistical variable. We collect our environment information from sources such as: <span>Our World in Data</span>.",
+    "questions": [
+      "CO2 emissions per capita in Kenya",
+      "CO2 emissions per capita in the world",
+      "CO2 emissions per capita of countries in Africa",
+      "Highest CO2 emitters in the world"
+    ],
+    "compare": [
+      "Countries with the highest CO2 emissions per capita",
+      "Compare CO2 emissions per capita in Kenya and Nigeria",
+      "How have CO2 emissions per capita changed in Kenya?",
+      "CO2 emissions per capita in the world over time"
+    ],
+    "visChips": [
+      {
+        "label": "CO2 emissions per capita in the world",
+        "url": "/tools/visualization#visType%3Dtimeline%26place%3DEarth%26placeType%3DCountry%26sv%3D%7B%22dcid%22%3A+%22Amount_Emissions_CarbonDioxide_PerCapita%22%7D"
+      }
+    ]
   }
 ]

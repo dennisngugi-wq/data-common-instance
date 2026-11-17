@@ -27,6 +27,14 @@
  {% block head %}
  <link rel="stylesheet" href={{url_for('static', filename='css/homepage.min.css', t=config['VERSION'])}}>
  <script src={{url_for('static', filename='homepage.js', t=config['VERSION'])}} async></script>
+ <style>
+   #dcp-home-links { max-width: 1100px; margin: 0 auto 40px; padding: 0 16px; display: flex; flex-wrap: wrap;
+     align-items: center; gap: 10px; font-family: "Google Sans Text", Roboto, sans-serif; }
+   #dcp-home-links .dcp-label { color: #5f6368; font-size: .9rem; margin-right: 4px; }
+   #dcp-home-links a { display: inline-block; padding: 8px 16px; border: 1px solid #dadce0; border-radius: 18px;
+     color: #0b57d0; text-decoration: none; font-size: .9rem; background: #fff; }
+   #dcp-home-links a:hover { background: #e8f0fe; border-color: #aecbfa; }
+ </style>
  {% endblock %}
 
  {% block content %}
@@ -38,6 +46,13 @@
 </div>
 
 <div id="app-container">
+</div>
+
+<div id="dcp-home-links" aria-label="Our data">
+  <span class="dcp-label">Our data:</span>
+  <a href="/explore/all">Topics and indicators</a>
+  <a href="/drilldown">Explore by place</a>
+  <a href="/data">Data sources</a>
 </div>
 
  {% endblock %}
