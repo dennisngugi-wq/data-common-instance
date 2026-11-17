@@ -7,7 +7,7 @@ isPartOf: dcid:DCProjectDataset_owid_co2_per_capita
 provenanceCategory: dcid:StatisticsProvenance
 url: "https://ourworldindata.org/grapher/co-emissions-per-capita"
 license: "https://creativecommons.org/licenses/by/4.0/"
-lastDataRefreshDate: "2026-11-13"
+lastDataRefreshDate: "2026-11-17"
 earliestDataImportDate: "2026-11-13"
 sourceDataUrl: "https://ourworldindata.org/grapher/co-emissions-per-capita.csv?v=1&csvType=full&useColumnShortNames=true"
 earliestObservationDate: "1750"

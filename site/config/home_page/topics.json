@@ -1,26 +1,18 @@
 [
   {
-    "id": "population",
-    "title": "Population & census",
+    "id": "demographics",
+    "title": "Demographics",
     "description": "1 dataset",
-    "url": "/data?topic=Population%20%26%20census&terms=population%7Ccensus",
-    "browseUrl": "/data?topic=Population%20%26%20census&terms=population%7Ccensus",
+    "url": "/data/demographics",
+    "browseUrl": "/data/demographics",
     "icon": "family_restroom"
   },
   {
-    "id": "agriculture",
-    "title": "Agriculture & industry",
-    "description": "1 dataset",
-    "url": "/data?topic=Agriculture%20%26%20industry&terms=agricultur%7Ccrop%7Clivestock%7Ccattle%7Cindustrial%7Cmanufactur",
-    "browseUrl": "/data?topic=Agriculture%20%26%20industry&terms=agricultur%7Ccrop%7Clivestock%7Ccattle%7Cindustrial%7Cmanufactur",
-    "icon": "agriculture"
-  },
-  {
     "id": "environment",
-    "title": "Environment & climate",
+    "title": "Environment",
     "description": "1 dataset",
-    "url": "/data?topic=Environment%20%26%20climate&terms=co2%7Cemission%7Cclimate",
-    "browseUrl": "/data?topic=Environment%20%26%20climate&terms=co2%7Cemission%7Cclimate",
+    "url": "/data/environment",
+    "browseUrl": "/data/environment",
     "icon": "eco"
   }
 ]

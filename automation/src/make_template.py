@@ -61,7 +61,10 @@ def build(path):
         ("Variables (optional)", True),
         ("One row per variable of the Data tab (same text in column Variable): a description shown on the site, "
          "the unit, and Min / Max: a value outside them stops the dataset from loading (the check against typing "
-         "errors). Leave Min / Max empty when unsure.", False),
+         "errors). Leave Min / Max empty when unsure. "
+         "Data Commons variable: leave empty and a variable whose name is exactly the name of a Data Commons variable "
+         "uses that one (no duplicate); write its id (e.g. Count_Person) to choose it yourself, or 'new' to keep "
+         "your own.", False),
         ("", False),
         ("Every value is checked before it is published; a sheet with a problem keeps its last good version on the "
          "site and the run report says which cell to fix.", False),
@@ -93,8 +96,8 @@ def build(path):
     data.freeze_panes = "A2"
 
     var = wb.create_sheet("Variables")
-    var.append(["Variable", "Description", "Unit", "Min", "Max"])
-    for c, w in zip("ABCDE", (44, 80, 16, 12, 16)):
+    var.append(["Variable", "Description", "Unit", "Min", "Max", "Data Commons variable"])
+    for c, w in zip("ABCDEF", (44, 80, 16, 12, 16, 40)):
         var.column_dimensions[c].width = w
     var.freeze_panes = "A2"
 

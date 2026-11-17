@@ -12,7 +12,7 @@ Source of the Croissant rules: `mcp agent/knowledge/originals/Croissant Metadata
 
 | Rule | |
 |---|---|
-| D1 | Only sheets you provide: Google Sheets or Excel files listed in `inbox/links.txt` or `config/sheets.json`. The pipeline never scrapes websites, transcribes reports or invents values. |
+| D1 | Only sheets you provide: Google Sheets linked in `data/inbox/links.txt` or `config/sheets.json`, or Excel files put in `data/inbox/files/`. The pipeline never scrapes websites, transcribes reports or invents values. |
 | D2 | A sheet missing something (licence, places, units) is reported; nothing is filled in by guessing. |
 
 ## 2. Croissant metadata (required, from the design doc)
@@ -53,6 +53,15 @@ each Provenance = one `cr:FileObject` + `cr:RecordSet`.
 |---|---|
 | V10 | Every node the schema refers to is defined. |
 | V12 | Nothing is ever written outside our namespace (`DCProject...`); existing Data Commons nodes are referenced, never redefined. |
+
+## 5. No duplicates
+
+| Rule | Meaning |
+|---|---|
+| N1 | A link or file is loaded once; a second entry with the same link is reported and ignored. |
+| N2 | A dataset (same name and same organisation) is loaded once; the second sheet is reported and not loaded. |
+| N3 | A variable whose name is exactly the name of a Data Commons variable uses that variable (referenced, never redefined: V12). The Variables tab column "Data Commons variable" overrides it: an id to choose the variable, `new` to keep a separate one. Two variables of one sheet cannot be the same Data Commons variable. |
+| N4 | A decision under N3 is kept, so a variable's id never changes by itself. If Data Commons cannot be reached for a new variable, the sheet waits for the next refresh instead of creating a copy. |
 
 ## Open points
 

@@ -5,6 +5,7 @@ import logging
 import re
 from pathlib import Path
 
+import dcmatch
 import fetch as fetch_mod
 import settings
 from places import norm
@@ -40,7 +41,9 @@ DATA_COLUMNS = {
     "unit": ["unit", "units", "unit of measure", "unit of measurement"],
 }
 VARIABLE_COLUMNS = {"variable": DATA_COLUMNS["variable"], "description": ["description", "definition"],
-                    "unit": DATA_COLUMNS["unit"], "min": ["min", "minimum"], "max": ["max", "maximum"]}
+                    "unit": DATA_COLUMNS["unit"], "min": ["min", "minimum"], "max": ["max", "maximum"],
+                    "dcid": ["data commons variable", "data commons dcid", "dc variable", "dcid",
+                             "existing variable"]}
 PLACE_TYPES = {
     "country": "Country", "countries": "Country",
     "province": "AdministrativeArea1", "provinces": "AdministrativeArea1", "state": "AdministrativeArea1",
@@ -89,16 +92,60 @@ def _json_entries(path, problems):
     return [(f"{path.name} entry {i + 1}", e) for i, e in enumerate(items or [])]
 
 
+def _is_link(text):
+    return bool(GOOGLE.search(text) or re.match(r"^https?://", text) or text.lower().endswith((".xlsx", ".xls")))
+
+
+def auto_id(link):
+    spec = parse_link(link)
+    key = spec.get("sheet_id") or spec.get("published_id")
+    tail = hashlib.sha1(str(key or link).encode()).hexdigest()[:4]
+    if key:
+        return f"gs_{re.sub(r'[^a-z0-9]', '', key.lower())[:10]}_{tail}"
+    stem = Path(link.split("?")[0].rstrip("/")).stem
+    name = re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")[:34] or "sheet"
+    return f"{name}_{tail}" if spec.get("url") else name
+
+
 def _text_entries(path):
     out = []
     for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        parts = line.split()
-        if not parts or parts[0].startswith("#"):
+        if line.strip().startswith("#"):
             continue
-        entry = {"id": parts[0], "link": parts[1] if len(parts) > 1 else "", "enabled": True}
-        if len(parts) > 2:
-            entry["kind"] = parts[2]
-        out.append((f"{INBOX_DIR}/{path.name} line {n}", entry))
+        where = f"{INBOX_DIR}/{path.name} line {n}"
+        for part in line.split(","):
+            parts = part.split()
+            if not parts:
+                continue
+            if not _is_link(parts[0]):
+                entry = {"id": parts[0], "link": parts[1] if len(parts) > 1 else "", "enabled": True}
+                if len(parts) > 2:
+                    entry["kind"] = parts[2]
+                out.append((where, entry))
+                continue
+            kind = next((x.lower() for x in parts if x.lower() in KINDS), None)
+            for link in parts:
+                if _is_link(link):
+                    out.append((where, {"id": auto_id(link), "link": link, "enabled": True,
+                                        **({"kind": kind} if kind else {})}))
+                elif link.lower() not in KINDS:
+                    out.append((where, {"id": "", "link": link, "enabled": True}))
+    return out
+
+
+def _file_entries(config_dir, inbox, listed, problems):
+    root = Path(config_dir).resolve().parent
+    named = "\n".join(p.read_text(encoding="utf-8") for d in ("feeds", "registries")
+                      for p in sorted((Path(config_dir) / d).glob("*.yaml")))
+    out = []
+    for p in sorted(inbox.rglob("*.xls*")):
+        rel = p.relative_to(root).as_posix()
+        if p.name.startswith(("~$", ".")) or rel in listed or rel in named:
+            continue
+        if p.suffix.lower() != ".xlsx":
+            problems.setdefault("config", []).append(f"{rel}: save this file as .xlsx (Excel workbook) to load it")
+            continue
+        out.append((rel, {"id": auto_id(rel), "link": rel, "enabled": True}))
     return out
 
 
@@ -119,11 +166,13 @@ def raw_entries(config_dir, problems):
             for where, e in _json_entries(p, problems):
                 entries.append((f"{INBOX_DIR}/{where}", dict(e, enabled=e.get("enabled", True))
                                 if isinstance(e, dict) else e))
+        listed = {str(e.get("link", "")).strip() for _, e in entries if isinstance(e, dict)}
+        entries += _file_entries(config_dir, inbox, listed, problems)
     return entries
 
 
 def load_list(config_dir, problems):
-    out = {}
+    out, links = {}, {}
     for where, e in raw_entries(config_dir, problems):
         if not isinstance(e, dict):
             problems.setdefault("config", []).append(f"{where}: must be an object {{id, link, enabled}}")
@@ -140,9 +189,13 @@ def load_list(config_dir, problems):
         spec = parse_link(e.get("link"))
         if not spec:
             msgs.append(f"{where} ({sid}): link is empty")
+        link_key = json.dumps({k: v for k, v in spec.items() if k != "gid"}, sort_keys=True)
+        if spec and not msgs and link_key in links and kind == "dataset":
+            msgs.append(f"{where}: this link is already loaded as {links[link_key]!r}; a sheet is loaded once")
         if msgs:
             problems.setdefault("config", []).extend(msgs)
             continue
+        links.setdefault(link_key, sid)
         out[sid] = {"id": sid, "kind": kind, "enabled": bool(e.get("enabled", False)), "link": str(e.get("link", "")),
                     "spec": spec, "note": e.get("note", ""), "allow_future": bool(e.get("allow_future", False))}
     return out
@@ -230,6 +283,26 @@ def parse(tabs):
             "tabs": {"about": about_tab, "data": data_tab, "variables": var_tab}}
 
 
+def variable_labels(parsed):
+    header, rows = parsed["data"]["header"], parsed["data"]["rows"]
+    cols = {f: _pick(header, opts) for f, opts in DATA_COLUMNS.items()}
+    if cols["variable"] and cols["value"]:
+        return list(dict.fromkeys(r.get(cols["variable"], "").strip() for r in rows
+                                  if r.get(cols["variable"], "").strip()))
+    return [h for h in header if h not in (cols["place"], cols["date"], cols["unit"])]
+
+
+def match_variables(entry, parsed, store, post=None):
+    key = f"sheets/{entry['id']}/dc_variables.json"
+    known = json.loads(store.read_text(key) or "{}").get("variables", {})
+    labels = variable_labels(parsed)
+    asked = {lab: (parsed.get("variables") or {}).get(" ".join(lab.split()), {}).get("dcid", "") for lab in labels}
+    found, problems = dcmatch.decide(labels, asked, known, **({"post": post} if post else {}))
+    doc = {"variables": {**known, **found}, "problems": problems}
+    store.write_text(key, json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True) + "\n")
+    return doc
+
+
 def sync(entry, store, stamp):
     base = f"sheets/{entry['id']}"
     report = {"sheet": entry["id"], "status": "OK", "link": entry["link"]}
@@ -243,7 +316,7 @@ def sync(entry, store, stamp):
         report.update(status="USING LAST COPY" if previous else "FAILED", error=str(exc)[:400],
                       last_copy_from=registries.saved_at(store, f"{base}/sha256.txt"))
         logging.error("sheet %s: %s", entry["id"], exc)
-        return (json.loads(previous) if previous else None), report
+        return (stored(entry, store) if previous else None), report
     parsed["content_url"] = url
     parsed["synced"] = stamp
     sha = hashlib.sha256(json.dumps(tabs, sort_keys=True).encode()).hexdigest()
@@ -258,12 +331,19 @@ def sync(entry, store, stamp):
             store.write_text(f"{base}/tabs/{re.sub(r'[^A-Za-z0-9_.-]+', '_', t)}.csv", registries._csv(rows))
         store.write_text(f"{base}/parsed.json", json.dumps(parsed, indent=1, ensure_ascii=False) + "\n")
         store.write_text(f"{base}/sha256.txt", sha + "\n")
+    matched = match_variables(entry, parsed, store)
+    parsed["dc_variables"] = matched
+    report["data_commons_variables"] = sum(1 for v in matched["variables"].values() if v.get("dcid"))
     return parsed, report
 
 
 def stored(entry, store):
     text = store.read_text(f"sheets/{entry['id']}/parsed.json")
-    return json.loads(text) if text else None
+    if not text:
+        return None
+    parsed = json.loads(text)
+    parsed["dc_variables"] = json.loads(store.read_text(f"sheets/{entry['id']}/dc_variables.json") or "{}")
+    return parsed
 
 
 def _source_key(reg, about, msgs):
@@ -307,18 +387,14 @@ def build_feed(entry, parsed, reg):
     src = reg.sources[src_key]
     topic = about.get("topic") or name
     group = f"{src['name']}/{topic}"
-    if long:
-        labels = []
-        for r in rows:
-            lab = r.get(cols["variable"], "").strip()
-            if lab and lab not in labels:
-                labels.append(lab)
-    else:
-        labels = [h for h in header if h not in (cols["place"], cols["date"], cols["unit"])]
+    labels = variable_labels(parsed)
     if not labels:
         return None, {}, {}, ["Data: no variable found (a 'Variable' column, or columns next to Place and Date)"]
 
     defs, variables, units, keys, vmap = parsed.get("variables") or {}, {}, {}, set(), {}
+    matched = parsed.get("dc_variables") or {}
+    msgs += matched.get("problems") or []
+    dc, mapped = matched.get("variables") or {}, {}
     unit_in_data = {}
     if long and cols["unit"]:
         for r in rows:
@@ -351,10 +427,13 @@ def build_feed(entry, parsed, reg):
             msgs.append(f"Variables: min/max of {lab!r} must be numbers")
             continue
         desc = d.get("description") or f"{lab}, from the dataset \"{name}\" published by {src['name']}."
+        known = (dc.get(lab) or {}).get("dcid")
+        if known:
+            mapped[" ".join(lab.split())] = known
         variables[key] = Variable(
-            key=key, dcid=f"{ns}_{key}", name=" ".join(lab.split()), description=" ".join(desc.split()), group=group,
-            population_type="Thing", measured_property=f"{ns}_{key}_Value", custom_property=True, unit=unit,
-            stat_type="measuredValue", constraints={}, min=vmin, max=vmax, existing=False)
+            key=key, dcid=known or f"{ns}_{key}", name=" ".join(lab.split()), description=" ".join(desc.split()),
+            group=group, population_type="Thing", measured_property=f"{ns}_{key}_Value", custom_property=not known,
+            unit=unit, stat_type="measuredValue", constraints={}, min=vmin, max=vmax, existing=bool(known))
     unknown = sorted(set(defs) - {" ".join(lab.split()) for lab in labels})
     if msgs:
         return None, {}, {}, msgs
@@ -385,7 +464,8 @@ def build_feed(entry, parsed, reg):
                 mapping=mapping, variables=sorted(variables),
                 max_row_drop_share=float(reg.instance["validation"]["max_row_drop_share"]),
                 allow_future=entry["allow_future"] or projections,
-                meta={"sheet_link": entry["link"], "unused_variable_rows": unknown})
+                meta={"sheet_link": entry["link"], "unused_variable_rows": unknown,
+                      "data_commons_variables": mapped})
     feed.dataset_dcid = f"{ns}Dataset_{sid}"
     feed.provenance_dcid = f"{ns}Prov_{sid}"
     return feed, variables, units, []
@@ -415,10 +495,17 @@ def add_feeds(reg, store, config_dir=None, sync_stamp=None, report=None, include
         if msgs:
             reg.problems.setdefault(sid, []).extend(msgs)
             continue
+        twin = next((o for o, f in reg.feeds.items() if f.source_key == feed.source_key
+                     and dcmatch.same_name(f.dataset.get("name"), feed.dataset["name"])), None)
+        if twin:
+            reg.problems.setdefault(sid, []).append(
+                f"About: this is the same dataset (name and organisation) as {twin!r}; a dataset is loaded once")
+            continue
         reg.feeds[sid] = feed
         for k, v in variables.items():
             reg.variables[k] = v
-            reg.groups.update({g: (n, p) for g, n, p in group_chain(reg.ns, v.group)})
+            if not v.existing:
+                reg.groups.update({g: (n, p) for g, n, p in group_chain(reg.ns, v.group)})
         reg.units.update(units)
     return reg
 

@@ -34,6 +34,7 @@ mapping:
 
 variables:
   population_total:
+    dcid: Count_Person
     name: "Total population"
     description: >-
       Midyear estimate of all residents of a country regardless of legal status or citizenship

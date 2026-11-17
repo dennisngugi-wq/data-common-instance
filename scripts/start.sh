@@ -14,7 +14,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 [ -f env.list ] || { echo "env.list missing: cp env.list.example env.list and add DC_API_KEY"; exit 1; }
 [ -f .env ] || cp .env.example .env
-mkdir -p work local_store local_dc local_dc_db
+mkdir -p work local_store local_dc local_dc_db data/inbox/files
 if ! grep -q '^KNOWLEDGE_HOST_DIR=' .env && [ ! -d "$PROJECT/../../mcp agent/knowledge" ]; then
   mkdir -p work/knowledge
   echo "KNOWLEDGE_HOST_DIR=$PROJECT/work/knowledge" >> .env

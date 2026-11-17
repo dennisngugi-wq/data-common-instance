@@ -354,6 +354,56 @@ def _json_file(path, default):
 
 
 DATA_DIR = os.environ.get('DCP_DATA_DIR', '/data')
+DATA_SOURCES_FILE = '/workspace/server/dist/custom_dc/custom/data_sources.json'
+STOCK_DATA_JS = '/workspace/server/dist/data.js'
+STOCK_SOURCES = re.compile(
+    r"""JSON\.parse\('\[\{"title":"[^"]*","slug":"[^"]*","dataSourceGroups":.*?\}\]\}\]\}\]'\)""", re.S)
+STOCK_INTRO = ('Data Commons harmonizes public data from many places around the world, including surveys. These '
+               'sources are organized into categories below. Not all data may be available yet.')
+PLAIN_DATA_JS = """window.addEventListener('load', function () {
+  var root = document.getElementById('app-container'), h = '<h1>Data sources</h1><p>' + INTRO + '</p>';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+  SOURCES.forEach(function (t) {
+    h += '<h2 id="' + esc(t.slug) + '">' + esc(t.title) + '</h2>';
+    t.dataSourceGroups.forEach(function (g) {
+      h += '<h3><a href="' + esc(g.url) + '">' + esc(g.label) + '</a></h3><ul>';
+      g.dataSources.forEach(function (d) {
+        h += '<li><a href="' + esc(d.url) + '">' + esc(d.label) + '</a>: ' + esc(d.description.split('\\n')[0]) + '</li>';
+      });
+      h += '</ul>';
+    });
+  });
+  root.innerHTML = '<div style="max-width:1100px;margin:32px auto;padding:0 16px">' + h + '</div>';
+});
+"""
+_data_js = {'key': None, 'body': ''}
+
+
+def data_sources_js():
+  try:
+    key = (os.path.getmtime(DATA_SOURCES_FILE), os.path.getmtime(STOCK_DATA_JS))
+  except OSError:
+    key = (0, 0)
+  if _data_js['key'] == key and _data_js['body']:
+    return _data_js['body']
+  topics = _json_file(DATA_SOURCES_FILE, []) or [{'title': 'No datasets yet', 'slug': 'none', 'dataSourceGroups': []}]
+  intro = (f'{INSTANCE_NAME} brings together data from the organisations below, organised into categories. Every '
+           'dataset listed carries a licence stated by its publisher and links to its data and its source.')
+  payload = json.dumps(topics, ensure_ascii=False, separators=(',', ':'))
+  try:
+    with open(STOCK_DATA_JS, encoding='utf-8') as f:
+      stock = f.read()
+  except OSError:
+    stock = ''
+  if STOCK_SOURCES.search(stock):
+    literal = "JSON.parse('" + payload.replace('\\', '\\\\').replace("'", "\\'") + "')"
+    body = STOCK_SOURCES.sub(lambda m: literal, stock, count=1).replace(STOCK_INTRO, intro.replace('"', "'"))
+  else:
+    logging.warning('custom.py: the stock data sources script changed; /data uses the plain layout')
+    body = f'var SOURCES = {payload}, INTRO = {json.dumps(intro)};\n' + PLAIN_DATA_JS
+  _data_js.update(key=key, body=body)
+  return body
 _datasets = {}
 
 
@@ -486,6 +536,11 @@ def _add_pages(static):
       body = {k: detail[k] for k in ('meta', 'source', 'variables', 'places')}
     return Response(json.dumps(body), 200, mimetype='application/json', headers={'Cache-Control': 'no-cache'})
 
+  def data_sources_script():
+    return Response(data_sources_js(), 200, mimetype='application/javascript',
+                    headers={'Cache-Control': 'no-cache'})
+
+  static.bp.add_url_rule('/api/custom/data-sources.js', 'dcp_data_sources_js', data_sources_script)
   static.bp.add_url_rule('/dataset/<path:dcid>', 'dcp_dataset', dataset_page)
   static.bp.add_url_rule('/api/custom/dataset/<path:dcid>', 'dcp_dataset_api', dataset_api)
   static.bp.add_url_rule('/api/custom/place-search', 'dcp_place_search', place_search)

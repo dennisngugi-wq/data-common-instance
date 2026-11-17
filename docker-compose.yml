@@ -61,6 +61,7 @@ services:
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
       KNOWLEDGE_DIR: /knowledge
+      SITE_URL: ${SITE_URL:-}
     volumes:
       - ${HOST_PROJECT_DIR}:/project
       - type: bind

@@ -4,6 +4,7 @@ import dataclasses
 import datetime as dt
 import json
 import logging
+import shutil
 import sys
 import time
 import traceback
@@ -68,6 +69,20 @@ def publish(store, import_name, folder: Path, stamp):
         if name not in new:
             (Path(store.root) / prefix / name).unlink(missing_ok=True)
     return True
+
+
+def prune(store, keep_backups=30, keep_reports=90):
+    removed = 0
+    for prefix, keep, is_dir in ((settings.BACKUP_PREFIX, keep_backups, True),
+                                 (settings.REPORT_PREFIX, keep_reports, False)):
+        base = Path(store.root) / prefix
+        if not base.is_dir():
+            continue
+        items = sorted(p for p in base.iterdir() if p.is_dir() == is_dir)
+        for old in items[:-keep] if len(items) > keep else []:
+            shutil.rmtree(old) if is_dir else old.unlink()
+            removed += 1
+    return removed
 
 
 def _var_to_dict(v):
@@ -141,6 +156,9 @@ def process_feed(feed, reg, args, work, store, resolver):
             if feed.meta.get("unused_variable_rows"):
                 entry["warnings"].append("Variables tab rows that match no variable in the Data tab: "
                                          f"{feed.meta['unused_variable_rows'][:8]}")
+            if feed.meta.get("data_commons_variables"):
+                entry["notes"].append("Uses existing Data Commons variables (no duplicate is created): " + "; ".join(
+                    f"{lab} = {dcid}" for lab, dcid in sorted(feed.meta["data_commons_variables"].items())[:12]))
             result = normalize_mod.normalize(table, feed, reg, resolver)
         elif feed.fetch.get("type") == "jsonstat":
             raw_path = work / "raw" / f"{feed.id}.raw"
@@ -355,6 +373,7 @@ def finalize(reg, state, work, store, stamp):
     text = json.dumps(report, indent=2, default=str) + "\n"
     (work / "validation_summary.json").write_text(text, encoding="utf-8")
     store.write_text(f"{settings.REPORT_PREFIX}/{stamp}.json", text)
+    prune(store)
     knowledge.update(reg, state, store, report, live)
     print(runlog.item("Shared schema (variables, units)", "error" if errors else
                       ("updated" if reg.schema_import in report["published_now"] else "unchanged"),

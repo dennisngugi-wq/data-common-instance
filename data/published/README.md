@@ -1,6 +1,6 @@
 # Published data (licensed datasets only)
 
-A snapshot, taken on 2026-11-13, of the datasets on this instance whose publisher states an open licence. Each folder
+A snapshot, taken on 2026-11-17, of the datasets on this instance whose publisher states an open licence. Each folder
 is one Data Commons import exactly as the pipeline publishes it: observations (`<id>.csv`: variable, place, date,
 value, unit), provenance (`<id>.mcf`) and the loader configuration (`config.json`). The live instance refreshes them
 every night from the source; this copy is not updated automatically.

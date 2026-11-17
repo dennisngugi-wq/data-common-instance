@@ -7,7 +7,7 @@ isPartOf: dcid:dc/d/WorldBank_WorldDevelopmentIndicators
 provenanceCategory: dcid:StatisticsProvenance
 url: "https://datacatalog.worldbank.org/search/dataset/0037712/World-Development-Indicators"
 license: "https://creativecommons.org/licenses/by/4.0/"
-lastDataRefreshDate: "2026-11-13"
+lastDataRefreshDate: "2026-11-17"
 earliestDataImportDate: "2026-11-13"
 sourceDataUrl: "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=20000&date=1960:2100"
 earliestObservationDate: "1960"

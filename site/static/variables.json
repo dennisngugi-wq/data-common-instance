@@ -1,1 +1,1 @@
-{"sources":[{"name":"Our World in Data","keywords":"Our World in Data OWID"},{"name":"World Bank","keywords":"World Bank The World Bank World Bank Group WB"}],"variables":[["DCProject_co2_emissions_per_capita","CO2 emissions per capita",0],["DCProject_population_total","Total population",1]]}
+{"sources":[{"name":"Our World in Data","keywords":"Our World in Data OWID"},{"name":"World Bank","keywords":"World Bank The World Bank World Bank Group WB"}],"variables":[["Amount_Emissions_CarbonDioxide_PerCapita","CO2 emissions per capita",0],["Count_Person","Total population",1]]}

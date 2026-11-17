@@ -11,6 +11,8 @@ LOG="logs/pipeline.log"
 DETAILS="logs/pipeline-details.log"
 LOADER="logs/loader.log"
 HISTORY="logs/history"
+ALERT="logs/ALERT.txt"
+ALERTS="logs/alerts.log"
 STEPS=5
 RULE="------------------------------------------------------------------------------"
 BAR="=============================================================================="
@@ -31,6 +33,20 @@ job() {
   printf '\n==== %s  %s\n' "$(date -u '+%Y-%m-%d %H:%M:%S UTC')" "$name" >> "$DETAILS"
   docker compose run --name "$name" -T pipeline "$@" >> "$LOG" 2>> "$DETAILS"
 }
+notify() { docker compose run --rm -T pipeline python automation/src/alert.py "$1" >> "$DETAILS" 2>&1 || true; }
+alert() {
+  mkdir -p logs
+  echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ') $1" > "$ALERT"
+  cat "$ALERT" >> "$ALERTS"; own "$ALERT" "$ALERTS"
+  log "ALERT: $1"
+  notify "REFRESH ALERT: $1 Details: logs/pipeline.log"
+}
+clear_alert() {
+  [ -f "$ALERT" ] || return 0
+  rm -f "$ALERT"
+  echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ') RECOVERED: $1" >> "$ALERTS"; own "$ALERTS"
+  notify "RECOVERED: $1"
+}
 finish() {
   [ -f work/run_summary.txt ] && cat work/run_summary.txt >> "$LOG"
   say ""
@@ -43,6 +59,15 @@ finish() {
   own "$LOG" "$DETAILS" "$HISTORY"
   echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ') $2" > "$LAST"; own "$LAST"
   log "$1"
+  case "$2" in
+    FAILED*) alert "$1" ;;
+    *)
+      if [ "${total:-0}" -gt 0 ] && [ $((${unreach:-0} * 2)) -ge "${total:-0}" ]; then
+        alert "$unreach of $total datasets could not be downloaded (no internet, or the publisher is down); the website shows the last good data."
+      else
+        clear_alert "$1"
+      fi ;;
+  esac
 }
 
 has_key() { [ -s env.list ] && grep -q '^DC_API_KEY=.' env.list && ! grep -q 'your_key_here' env.list; }
@@ -50,11 +75,13 @@ has_key() { [ -s env.list ] && grep -q '^DC_API_KEY=.' env.list && ! grep -q 'yo
 refresh() {
   if ! has_key; then
     log "env.list with DC_API_KEY missing: copy env.list.example to env.list and add your key"
+    alert "FAILED: env.list with DC_API_KEY is missing, so nothing was refreshed."
     return 1
   fi
   mkdir -p work/feed_reports local_store local_dc "$HISTORY" && own work local_store local_dc logs
   rm -f "$LOG" "$DETAILS"
   rm -f work/run_summary.txt work/local_dc_status.txt
+  total=0; unreach=0
   START=$(date -u +%s)
   {
     echo "$BAR"
@@ -88,6 +115,7 @@ refresh() {
     f=$(echo "${c#dcproject-data-}" | tr '-' '_')
     echo "$feeds" | grep -qx "$f" || docker rm -f "$c" >/dev/null 2>&1
   done
+  unreach=$(grep -l '"E1 ' work/feed_reports/*.json 2>/dev/null | wc -l | tr -d ' ')
   say ""
   say "  $n dataset(s) checked, $bad failed (a dataset that breaks a rule in RULES.md is not on the website;"
   say "  one whose source could not be reached keeps its last good version)"
@@ -161,16 +189,15 @@ if [ "${REFRESH_ON_START:-true}" = "true" ] || [ ! -f local_dc_db/datacommons/da
 fi
 while true; do
   wait_s=$(seconds_until_next_run)
+  due=$(( $(date -u +%s) + wait_s ))
   log "next refresh in $((wait_s / 3600))h $((wait_s % 3600 / 60))m"
-  while [ "$wait_s" -gt 0 ]; do
+  while [ "$(date -u +%s)" -lt "$due" ]; do
     if [ -f "$TRIGGER" ]; then
       rm -f "$TRIGGER"
       log "on-demand refresh requested"
       break
     fi
-    step=60; [ "$wait_s" -lt 60 ] && step=$wait_s
-    sleep "$step"
-    wait_s=$((wait_s - step))
+    sleep 30
   done
   refresh || log "refresh failed"
 done

@@ -3,6 +3,7 @@ import argparse
 import csv
 import io
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -12,7 +13,49 @@ import registries
 import registry as registry_mod
 import runlog
 import settings
+import topics as topics_mod
 from storage import LocalStore
+
+SUMMARY_MAX = 320
+
+
+def licence_label(url):
+    m = re.search(r"creativecommons\.org/(licenses|publicdomain)/([a-z-]+)/(\d+(?:\.\d+)?)", url or "")
+    if m:
+        return ("CC0 " if m.group(2) == "zero" else f"CC {m.group(2).upper()} ") + m.group(3)
+    m = re.search(r"opendatacommons\.org/licenses/([a-z-]+)", url or "")
+    return f"ODC {m.group(1).upper()}" if m else "Licence"
+
+
+def summary(text):
+    text = " ".join(str(text or "").split())
+    if len(text) <= SUMMARY_MAX:
+        return text
+    cut = text[:SUMMARY_MAX]
+    end = max(cut.rfind(". "), cut.rfind("; "))
+    return cut[:end + 1] if end > 80 else cut.rsplit(" ", 1)[0] + " ..."
+
+
+def data_sources(catalog):
+    by_topic = {}
+    for s in catalog["sources"]:
+        for d in s["datasets"]:
+            span = d["first_date"] if d["first_date"] == d["last_date"] else f"{d['first_date']} to {d['last_date']}"
+            facts = f"{d['variables']:,} variable{'s' if d['variables'] != 1 else ''}, {d['places']:,} " \
+                    f"place{'s' if d['places'] != 1 else ''}, {span}; updated {d['refreshed']}."
+            links = [f"Data made available under [{licence_label(d['license'])}]({d['license']})"]
+            if d.get("url"):
+                links.append(f"[Publisher's page]({d['url']})")
+            links.append(f"[Croissant metadata](/croissant/{d['dcid']})")
+            entry = {"label": d["name"], "url": f"/dataset/{d['dcid']}",
+                     "description": f"{summary(d['description'])}\n\n{facts}\n\n{' · '.join(links)}"}
+            for slug in d["topics"]:
+                groups = by_topic.setdefault(slug, {})
+                groups.setdefault(s["name"], {"label": s["name"], "url": s["url"], "description": None,
+                                              "dataSources": []})["dataSources"].append(entry)
+    return [{"title": topics_mod.TITLES[slug], "slug": slug,
+             "dataSourceGroups": sorted(by_topic[slug].values(), key=lambda g: g["label"].lower())}
+            for slug in topics_mod.ORDER if slug in by_topic]
 
 
 def build(store_dir):
@@ -58,17 +101,20 @@ def build(store_dir):
         dates = sorted({r["date"] for r in rows})
         var_dcids = sorted({r["variable"][5:] for r in rows})
         src_names = [x for x in [src["name"], src.get("short")] + src.get("aliases", []) if x]
+        by_dcid = {v.dcid: v for v in reg.variables.values()}
+        labels = [x for x in (f.meta.get("Sub-domain"), f.meta.get("Domain")) if x] or sorted(
+            {by_dcid[d].group.split("/")[-1] for d in var_dcids if d in by_dcid and by_dcid[d].group})
         ds = {"feed": fid, "dcid": f.dataset_dcid, "name": f.dataset.get("name"),
               "description": f.dataset.get("description"), "url": f.dataset.get("url"),
               "license": f.dataset.get("license") or None, "data_url": st.get("content_url") or f.fetch.get("url"),
               "refreshed": st.get("refreshed"), "rows": len(rows), "places": len(places),
               "first_date": dates[0] if dates else None, "last_date": dates[-1] if dates else None,
               "variables": len(var_dcids), "example_variable": var_dcids[0] if var_dcids else None,
-              "example_place": places.most_common(1)[0][0] if places else None}
+              "example_place": places.most_common(1)[0][0] if places else None,
+              "topics": topics_mod.classify(labels, f"{f.dataset.get('name')} {f.dataset.get('description')}")}
         entry = sources.setdefault(src["name"], {"name": src["name"], "url": src["url"], "dcid": src["dcid"],
                                                  "aliases": src_names[1:], "datasets": []})
         entry["datasets"].append(ds)
-        by_dcid = {v.dcid: v for v in reg.variables.values()}
         for d in var_dcids:
             v = by_dcid.get(d)
             variables[d] = {"dcid": d, "name": v.name if v else d, "source": src["name"]}
@@ -90,7 +136,8 @@ def build(store_dir):
                              for v in sorted(variables.values(), key=lambda v: v["name"])]}
     var_home = {v: c.most_common(1)[0][0] for v, c in sorted(home.items())
                 if c and c.most_common(1)[0][1] >= 0.5 * sum(c.values())}
-    return {"catalog.json": catalog, "variables.json": compact, "data_places.json": sorted(data_places),
+    return {"catalog.json": catalog, "data_sources.json": data_sources(catalog), "variables.json": compact,
+            "data_places.json": sorted(data_places),
             "var_home.json": var_home,
             "croissant_extra.json": extra}
 

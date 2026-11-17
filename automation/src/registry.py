@@ -1,3 +1,4 @@
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -147,7 +148,8 @@ def load(config_dir=None, include_disabled=()):
         problems.setdefault("config", []).append("instance.yaml: namespace must be letters, digits or _")
         ns = ns if ns else "DCProject"
     instance.setdefault("name", "Data Commons")
-    instance.setdefault("site_url", "http://localhost:8090")
+    instance["site_url"] = (os.environ.get("SITE_URL") or instance.get("site_url")
+                            or "http://localhost:8090").rstrip("/")
     instance.setdefault("public_data_url", "")
     instance.setdefault("earliest_year", 1800)
     val = instance.setdefault("validation", {}) or {}

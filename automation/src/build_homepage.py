@@ -3,17 +3,15 @@ import argparse
 import csv
 import io
 import json
-import re
 import sys
-import unicodedata
 from pathlib import Path
-from urllib.parse import quote
 
 import croissant
 import registry as registry_mod
 import registries
 import runlog
 import settings
+import topics as topics_mod
 from storage import LocalStore
 
 PREFERRED = ["country/KEN", "country/NGA", "country/ETH", "country/EGY", "country/ZWE", "Earth"]
@@ -47,39 +45,20 @@ def questions(store_dir):
     return out[:6]
 
 
-TOPICS = [
-    ("population", "Population & census", "family_restroom", ["population", "census"]),
-    ("labour", "Jobs & income", "work", ["labour", "employ", "income", "wage"]),
-    ("prices", "Prices & inflation", "sell", ["price", "inflation", "consumerprice"]),
-    ("economy", "GDP & national accounts", "account_balance", ["nationalaccounts", "gdp", "grossdomestic"]),
-    ("agriculture", "Agriculture & industry", "agriculture", ["agricultur", "crop", "livestock", "cattle",
-                                                              "industrial", "manufactur"]),
-    ("health", "Health & vital statistics", "health_and_safety", ["health", "ebola", "birth", "death", "vital"]),
-    ("trade-migration", "Trade & migration", "swap_horiz", ["trade", "migra", "export", "import"]),
-    ("environment", "Environment & climate", "eco", ["co2", "emission", "climate"]),
-]
-
-
-def _norm(s):
-    s = unicodedata.normalize("NFD", str(s or "")).lower()
-    return re.sub(r"[^a-z0-9]+", "", "".join(c for c in s if unicodedata.category(c) != "Mn"))
-
-
 def topics(catalog_path):
     try:
         catalog = json.loads(Path(catalog_path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
-    texts = [_norm(d.get("name", "") + " " + d.get("description", ""))
-             for s in catalog.get("sources", []) for d in s.get("datasets", [])]
-    out = []
-    for tid, title, icon, terms in TOPICS:
-        n = sum(1 for t in texts if any(term in t for term in terms))
-        if n:
-            url = "/data?topic=" + quote(title) + "&terms=" + quote("|".join(terms))
-            out.append({"id": tid, "title": title, "description": f"{n} dataset{'s' if n != 1 else ''}",
-                        "url": url, "browseUrl": url, "icon": icon})
-    return out
+    counts = {}
+    for s in catalog.get("sources", []):
+        for d in s.get("datasets", []):
+            for slug in d.get("topics", []):
+                counts[slug] = counts.get(slug, 0) + 1
+    return [{"id": slug, "title": topics_mod.TITLES[slug],
+             "description": f"{counts[slug]} dataset{'s' if counts[slug] != 1 else ''}",
+             "url": f"/data/{slug}", "browseUrl": f"/data/{slug}", "icon": topics_mod.ICONS[slug]}
+            for slug in topics_mod.ORDER if slug in counts]
 
 
 def _write(path, obj):

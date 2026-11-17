@@ -42,6 +42,7 @@ mapping:
 
 variables:
   co2_emissions_per_capita:
+    dcid: Amount_Emissions_CarbonDioxide_PerCapita
     name: "CO2 emissions per capita"
     description: >-
       Annual carbon dioxide emissions from fossil fuels and industry (excluding land-use change) divided by

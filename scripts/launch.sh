@@ -45,4 +45,5 @@ else
   fi
   bash scripts/start.sh || { note "Not up yet: see work/launch.log or logs/pipeline.log"; exit 1; }
 fi
+[ -f logs/ALERT.txt ] && note "Refresh problem: $(cut -d' ' -f2- logs/ALERT.txt)"
 xdg-open "$URL" >/dev/null 2>&1 &
