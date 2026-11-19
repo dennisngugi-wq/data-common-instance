@@ -67,6 +67,31 @@
   function placeName(d) { return (info.placeIndex[d] || {}).name || d; }
   function stat(v, l) { return '<div class="stat"><b>' + esc(v) + '</b><span>' + esc(l) + '</span></div>'; }
 
+  function renderCatalogue() {
+    var m = info.meta, s = info.source || {};
+    document.title = m.name + ' - Data sources';
+    function row(k, v) { return v ? '<tr><th>' + esc(k) + '</th><td>' + v + '</td></tr>' : ''; }
+    function link(u) { return u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + '</a>' : ''; }
+    body.innerHTML =
+      '<h1>' + esc(m.name) + '</h1>' +
+      '<div class="src">Published by ' + (s.url ? '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">' +
+        esc(s.name) + '</a>' : esc(s.name || '')) + ' · <a href="' + esc(m.license) + '" target="_blank" rel="noopener">' +
+        'Licence: ' + esc(m.license_name || m.license) + '</a></div>' +
+      '<p class="desc">' + esc(m.description) + '</p>' +
+      '<div class="links"><a href="' + esc(m.url) + '" target="_blank" rel="noopener">Original source ↗</a>' +
+        '<a href="' + esc(m.data_url) + '" target="_blank" rel="noopener">Raw data ↗</a>' +
+        '<a href="/browser/' + esc(m.dcid) + '">Knowledge graph</a>' +
+        '<a href="/croissant/' + esc(m.dcid) + '">Croissant JSON-LD</a></div>' +
+      '<h2>About this dataset</h2><table><tbody>' +
+        row('Country', esc(m.country) + ' <span class="muted">(' + esc(m.place) + ')</span>') + row('Domain', esc(m.domain)) +
+        row('Geographic level', esc(m.geo_level)) + row('Format', esc(m.format)) +
+        row('Temporal coverage', esc(m.coverage)) + row('Update frequency', esc(m.frequency)) +
+        row('Date published', esc(m.published)) + row('Licence', link(m.license)) + row('Data link', link(m.data_url)) +
+        row('Landing page', link(m.url)) + '</tbody></table>' +
+      '<p class="muted">This dataset is listed from the team catalogue with its publisher\'s metadata; its values are ' +
+      'at the data link above.</p>';
+  }
+
   function renderShell() {
     var m = info.meta, s = info.source || {};
     document.title = m.name + ' - Data sources';
@@ -238,6 +263,7 @@
 
   fetch(api).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
     info = d; info.placeIndex = {};
+    if (info.catalogue) { renderCatalogue(); return; }
     d.places.forEach(function (p) { info.placeIndex[p.dcid] = p; });
     renderShell();
     var start = params.get('v');

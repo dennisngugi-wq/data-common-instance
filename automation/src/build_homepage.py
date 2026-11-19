@@ -68,6 +68,47 @@ def questions(store_dir):
     return out[:6]
 
 
+def loaded_variables(store_dir):
+    store = LocalStore(store_dir)
+    reg = registry_mod.load()
+    registries.add_stored_feeds(reg, store)
+    found = {}
+    for fid in sorted(reg.feeds):
+        text = store.read_text(f"{settings.DCP_INPUT_ROOT}/{fid}/{fid}.csv")
+        if not text or not croissant.publishable(reg.feeds[fid], reg):
+            continue
+        by_name = {v.dcid: v.name for v in reg.variables.values()}
+        for r in csv.DictReader(io.StringIO(text)):
+            var, place = r["variable"][5:], r["entity"][5:]
+            found.setdefault(var, {"name": by_name.get(var, var), "places": {}})["places"][place] = None
+    return found
+
+
+def tool_examples(variables, limit=6):
+    countries = [(v, d) for v, d in sorted(variables.items(), key=lambda kv: kv[1]["name"])
+                 if any(p.startswith("country/") for p in d["places"])][:limit]
+    timeline, map_examples, vis_timeline, vis_map = [], [], [], []
+    for var, d in countries:
+        place = next(p for p in PREFERRED if p in d["places"]) if any(p in d["places"] for p in PREFERRED) \
+            else next(p for p in d["places"] if p.startswith("country/"))
+        enc = urllib.parse.quote
+        slug = "".join(c if c.isalnum() else "_" for c in var).lower()
+        timeline.append({"id": f"timeline_{slug}", "title": d["name"],
+                         "url": f"/tools/timeline#place={enc(place, safe='')}&statsVar={enc(var, safe='')}"})
+        map_examples.append({"id": f"map_{slug}", "title": d["name"],
+                             "url": f"/tools/map#%26sv%3D{enc(var, safe='')}%26pd%3DEarth%26ept%3DCountry"})
+    return {
+        "timeline_vis_tool_examples.json": timeline,
+        "map_vis_tool_examples.json": map_examples,
+        "scatter_vis_tool_examples.json": [],
+        "timeline_examples.json": {"timeline": []},
+        "map_examples.json": {"map": []},
+        "scatter_examples.json": {"scatter": []},
+        "visualization_examples.json": {"map": [], "scatter": [], "timeline": []},
+        "download_examples.json": [],
+    }
+
+
 def _count_label(n):
     """datacommons.org styles big variable counts as 67.5K; keep small counts exact."""
     if n >= 1_000_000:
@@ -104,6 +145,32 @@ def _intro(slug, title, var_count, source_names, empty_message):
             f"{msg}{tail}")
 
 
+CARDS_PER_TOPIC = 12
+SOURCES_IN_INTRO = 8
+
+
+def _spread(items, limit):
+    by_country = {}
+    for d in items:
+        by_country.setdefault(d.get("country", ""), []).append(d)
+    out = []
+    while len(out) < limit and any(by_country.values()):
+        for country in sorted(by_country):
+            if by_country[country] and len(out) < limit:
+                out.append(by_country[country].pop(0))
+    return out
+
+
+def catalogue_intro(title, n, countries, source_names):
+    lower = title.lower()
+    if not n:
+        return f"No {lower} datasets are in the catalogue yet."
+    where = f" for {len(countries)} countr{'y' if len(countries) == 1 else 'ies'}" if countries else ""
+    return (f"Our {lower} catalogue spans <strong title=\"{n:,}\">{_count_label(n)}</strong> dataset"
+            f"{'' if n == 1 else 's'}{where}. We collect our {lower} information from sources such as: "
+            f"{_source_spans(source_names)}.")
+
+
 def topics(catalog_path):
     """Topic pages for /explore/<topic>, with only the indicators this instance actually has."""
     catalog = _json(catalog_path, {})
@@ -114,9 +181,16 @@ def topics(catalog_path):
     source_names = [s.get("name", "") for s in variables.get("sources", [])]
 
     counts, indicators, var_counts, topic_sources = {}, {}, {}, {}
+    topic_cat, topic_src_n = {}, {}
     for s in catalog.get("sources", []):
         for d in s.get("datasets", []):
             for slug in d.get("topics", []):
+                if d.get("catalogue"):
+                    topic_cat.setdefault(EXPLORE_SLUGS.get(slug, slug), []).append(
+                        {"name": d["name"], "url": f"/dataset/{d['dcid']}", "country": d.get("country", ""),
+                         "source": s.get("name", "")})
+                    sn = topic_src_n.setdefault(EXPLORE_SLUGS.get(slug, slug), {})
+                    sn[s.get("name", "")] = sn.get(s.get("name", ""), 0) + 1
                 counts[slug] = counts.get(slug, 0) + 1
                 var_counts[slug] = var_counts.get(slug, 0) + int(d.get("variables") or 0)
                 topic_sources.setdefault(slug, set()).add(s.get("name", ""))
@@ -177,11 +251,16 @@ def topics(catalog_path):
             "emptyMessage": c.get("emptyMessage", default.get("emptyMessage", "")),
             # datacommons.org explore-page structure
             "varCount": var_counts.get(slug, 0),
-            "introHtml": _intro(slug, title, var_counts.get(slug, 0), src_names,
-                                c.get("emptyMessage", default.get("emptyMessage", ""))),
-            "questions": c.get("questions", default.get("questions", [])),
-            "compare": c.get("compare", default.get("compare", [])),
+            "introHtml": catalogue_intro(
+                title, len(topic_cat.get(slug, [])), {d["country"] for d in topic_cat.get(slug, [])},
+                [n for n, _ in sorted(topic_src_n.get(slug, {}).items(), key=lambda kv: -kv[1])][:SOURCES_IN_INTRO])
+            if topic_cat.get(slug) else _intro(slug, title, var_counts.get(slug, 0), src_names,
+                                               c.get("emptyMessage", default.get("emptyMessage", ""))),
+            "questions": [] if topic_cat.get(slug) else c.get("questions", default.get("questions", [])),
+            "compare": [] if topic_cat.get(slug) else c.get("compare", default.get("compare", [])),
             "visChips": vis_chips,
+            "cards": _spread(topic_cat.get(slug, []), CARDS_PER_TOPIC),
+            "catalogueCount": len(topic_cat.get(slug, [])),
         })
     return out
 
@@ -204,6 +283,9 @@ def main(argv=None):
     p.add_argument("--topics-out", default=str(home / "topics.json"))
     p.add_argument("--catalog", default=str(settings.PROJECT_ROOT / "site" / "static" / "catalog.json"))
     a = p.parse_args(argv)
+    templates = settings.PROJECT_ROOT / "site" / "templates"
+    for name, doc in tool_examples(loaded_variables(a.store_dir)).items():
+        _write(templates / name, doc)
     _write(a.out, questions(a.store_dir))
     _write(a.topics_out, topics(a.catalog))
     return 0

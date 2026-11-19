@@ -265,7 +265,9 @@ def _indicator_index():
       with open(VARIABLES_FILE, encoding='utf-8') as f:
         doc = json.load(f)
       srcs = [set(_norm(s['keywords']).split()) for s in doc['sources']]
-      _indicators = [{'dcid': d, 'name': n, 'name_words': _norm(n).split(), 'src_words': srcs[i]}
+      kws = {k: _norm(v).split() for k, v in (doc.get('keywords') or {}).items()}
+      _indicators = [{'dcid': d, 'name': n, 'name_words': _norm(n).split(), 'src_words': srcs[i],
+                      'kw_words': kws.get(d, [])}
                      for d, n, i in doc['variables']]
       _indicators_mtime = mtime
     except Exception:
@@ -278,25 +280,61 @@ def _word_hit(x, w, last):
   return x == w or ((last or len(w) >= 3) and x.startswith(w))
 
 
-def search_indicators(query, limit=6):
-  words = [w for w in _norm(query).split() if w not in _STOP]
-  if not words:
-    return []
+def _score_indicators(words, indicators):
   scored = []
-  for ind in _indicator_index():
+  for ind in indicators:
     score = 0
     for n, w in enumerate(words):
       last = n == len(words) - 1
       if any(_word_hit(x, w, last) for x in ind['name_words']):
         continue
-      if any(_word_hit(x, w, last) for x in ind['src_words']):
+      if any(_word_hit(x, w, last) for x in ind['kw_words']) or any(
+              _word_hit(x, w, last) for x in ind['src_words']):
         score += 1
         continue
       break
     else:
       scored.append((score, len(ind['name']), ind))
   scored.sort(key=lambda x: (x[0], x[1]))
-  return [ind for _, _, ind in scored[:limit]]
+  return scored
+
+
+def _score_any_word(words, indicators):
+  """Loose ranking: variables matching at least one word, most words first."""
+  scored = []
+  for ind in indicators:
+    hits = 0
+    for n, w in enumerate(words):
+      last = n == len(words) - 1
+      if any(_word_hit(x, w, last) for x in ind['name_words']):
+        hits += 2
+      elif any(_word_hit(x, w, last) for x in ind['kw_words']) or any(
+              _word_hit(x, w, last) for x in ind['src_words']):
+        hits += 1
+    if hits:
+      scored.append((-hits, len(ind['name']), ind))
+  scored.sort(key=lambda x: (x[0], x[1]))
+  return scored
+
+
+def search_indicators(query, limit=6):
+  words = [w for w in _norm(query).split() if w not in _STOP]
+  if not words:
+    return []
+  scored = _score_indicators(words, _indicator_index())
+  return [ind for _, _, ind in (scored[:limit] if limit else scored)]
+
+
+def search_all_indicators(query):
+  """Every variable that matches, ranked best first (Statistical Variable Explorer search)."""
+  words = [w for w in _norm(query).split() if w not in _STOP]
+  if not words:
+    return []
+  indicators = _indicator_index()
+  scored = _score_indicators(words, indicators)
+  if not scored:
+    scored = _score_any_word(words, indicators)
+  return [ind for _, _, ind in scored]
 
 
 def _split_place(query):
@@ -339,6 +377,39 @@ def _patch_stat_var_autocomplete(stat_vars):
   stat_vars.analyze_query_concepts = analyze_query_concepts
   stat_vars.search_stat_vars = search_stat_vars
   logging.info('custom.py: indicator suggestions served from %d local variables', len(_indicator_index()))
+
+
+def _patch_stat_var_search_v2(stat_var_search_v2):
+  """Statistical Variable Explorer search from local data only (no api.datacommons.org)."""
+  from server.services import datacommons as dc
+
+  def _filter_entities(stat_vars, entities):
+    if not stat_vars or not entities:
+      return stat_vars
+    try:
+      resp = dc.post(dc.get_service_url('/v2/observation'), {
+          'variable': {'dcids': [s['dcid'] for s in stat_vars]},
+          'entity': {'dcids': list(entities)},
+          'select': ['variable', 'entity']})
+      by_var = resp.get('byVariable', {})
+      return [s for s in stat_vars if by_var.get(s['dcid'], {}).get('byEntity')]
+    except Exception:
+      logging.exception('custom.py: stat var search entity filter failed')
+      return stat_vars
+
+  def _local(query):
+    return [{'dcid': ind['dcid'], 'name': ind['name']} for ind in search_all_indicators(query)]
+
+  def stat_var_v2_search(query, entities):
+    query = query or ''
+    phrase = _split_place(query)[0].strip()
+    stat_vars = _local(phrase) if phrase else _local(query)
+    if not stat_vars and phrase and phrase != query.strip():
+      stat_vars = _local(query)
+    return _filter_entities(stat_vars, entities)
+
+  stat_var_search_v2.stat_var_v2_search = stat_var_v2_search
+  logging.info('custom.py: stat var explorer search served from %d local variables', len(_indicator_index()))
 
 
 CATALOG_FILE = '/workspace/server/dist/custom_dc/custom/catalog.json'
@@ -522,6 +593,10 @@ def _add_pages(static):
 
   def dataset_api(dcid):
     from flask import request
+    src, ds = _find_dataset(dcid)
+    if ds and ds.get('catalogue'):
+      return Response(json.dumps({'catalogue': True, 'meta': ds, 'source': src}), 200, mimetype='application/json',
+                      headers={'Cache-Control': 'no-cache'})
     detail = dataset_detail(dcid)
     if not detail:
       return Response(json.dumps({'error': f'{dcid} is not a dataset in this Data Commons'}), 404,
@@ -741,8 +816,58 @@ QUERY_PLACE_ALIASES = {
     'mashonaland west': 'mashonaland west province', 'matabeleland north': 'matabeleland north province',
     'matabeleland south': 'matabeleland south province',
 }
+_DEMONYMS = {
+    'algerian': 'algeria', 'angolan': 'angola', 'beninese': 'benin', 'botswanan': 'botswana',
+    'burkinabe': 'burkina faso', 'burundian': 'burundi', 'cameroonian': 'cameroon', 'chadian': 'chad',
+    'comorian': 'comoros', 'congolese': 'democratic republic of the congo', 'djiboutian': 'djibouti',
+    'egyptian': 'egypt', 'eritrean': 'eritrea', 'swazi': 'eswatini', 'ethiopian': 'ethiopia',
+    'gabonese': 'gabon', 'gambian': 'gambia', 'ghanaian': 'ghana', 'guinean': 'guinea', 'ivorian': 'cote d ivoire',
+    'kenyan': 'kenya', 'basotho': 'lesotho', 'liberian': 'liberia', 'libyan': 'libya', 'malagasy': 'madagascar',
+    'malawian': 'malawi', 'malian': 'mali', 'mauritanian': 'mauritania', 'mauritian': 'mauritius',
+    'moroccan': 'morocco', 'mozambican': 'mozambique', 'namibian': 'namibia', 'nigerien': 'niger',
+    'nigerian': 'nigeria', 'rwandan': 'rwanda', 'senegalese': 'senegal', 'sierra leonean': 'sierra leone',
+    'somali': 'somalia', 'south african': 'south africa', 'south sudanese': 'south sudan', 'sudanese': 'sudan',
+    'tanzanian': 'tanzania', 'togolese': 'togo', 'tunisian': 'tunisia', 'ugandan': 'uganda',
+    'zambian': 'zambia', 'zimbabwean': 'zimbabwe',
+    'american': 'united states', 'british': 'united kingdom', 'canadian': 'canada', 'chinese': 'china',
+    'french': 'france', 'german': 'germany', 'indian': 'india', 'japanese': 'japan', 'brazilian': 'brazil',
+    'mexican': 'mexico', 'australian': 'australia', 'russian': 'russia', 'italian': 'italy', 'spanish': 'spain',
+    'turkish': 'turkey', 'saudi': 'saudi arabia', 'emirati': 'united arab emirates',
+}
+for _demonym, _country in _DEMONYMS.items():
+  QUERY_PLACE_ALIASES.setdefault(_demonym, _country)
+  QUERY_PLACE_ALIASES.setdefault(_demonym + 's', _country)
 _ALIAS_RE = re.compile(r'\b(' + '|'.join(sorted((re.escape(k) for k in QUERY_PLACE_ALIASES), key=len, reverse=True))
                        + r')\b(?!\s+province)', re.IGNORECASE)
+
+
+_FILLER = re.compile(
+    r"\b(what('s| is| are| was| were)?|tell me( about)?|show me|give me|can you (show|tell) me|how (much|many)( is| are)?|"
+    r"the (current|latest|recent|present)|current(ly)?|latest|recent(ly)?|presently|today|right now|now|please)\b",
+    re.IGNORECASE)
+
+
+def _clean_filler(text):
+  cleaned = re.sub(r'\s+', ' ', _FILLER.sub(' ', text or '')).strip()
+  cleaned = re.sub(r'^(the|a|an|of|in|for)\s+|\s+(the|of|in|for)$', '', cleaned, flags=re.IGNORECASE).strip()
+  return cleaned or text
+
+
+def _patch_follow_up_questions(related):
+  def generate_follow_up_questions(query, related_topics):
+    phrase, place = _split_place(query)
+    asked = _norm(phrase or query)
+    out, seen = [], set()
+    for topic in related_topics or []:
+      topic = re.sub(r'\s+', ' ', str(topic or '')).strip()
+      key = _norm(topic)
+      if not topic or key in seen or key == asked:
+        continue
+      seen.add(key)
+      out.append(f'{topic} in {place}' if place else topic)
+    return out[:6]
+
+  related.generate_follow_up_questions = generate_follow_up_questions
 
 
 def _patch_place_detection(place):
@@ -771,6 +896,11 @@ def _patch_place_detection(place):
           det.query_original = orig_query
       except Exception:
         logging.exception('custom.py: place alias %s', forced)
+    try:
+      if getattr(det, 'query_without_place_substr', None):
+        det.query_without_place_substr = _clean_filler(det.query_without_place_substr)
+    except Exception:
+      logging.exception('custom.py: filler words')
     return det
 
   place.detect_from_query_dc = detect_from_query_dc
@@ -919,13 +1049,32 @@ def _patch_responses():
   flask.Flask.process_response = process_response
 
 
+def _patch_observation_existence(module):
+  import types
+  stock = module.fetch.observation_existence
+
+  def existence(variables, entities):
+    if list(variables) == ['dc/g/Root']:
+      listed = {src['dcid'] for src in _json_file(CATALOG_FILE, {}).get('sources', []) if src.get('datasets')}
+      return {'dc/g/Root': {dcid: dcid in listed for dcid in entities}}
+    return stock(variables, entities)
+
+  module.fetch = types.SimpleNamespace(observation_existence=existence)
+
+
 _PATCHES = {
+    'server.routes.shared_api.observation.existence': (_patch_observation_existence,
+                                                       'list catalogue sources in the Statistical Variable Explorer'),
     'server.routes.explore.helpers': (_patch_default_place, 'set World as the default search place'),
     'server.routes.static': (_add_pages, 'add /drilldown, /sitemap.xml, /robots.txt, /croissant/<dcid>, '
                              '/api/custom/place-search'),
     'server.routes.shared_api.autocomplete.stat_vars': (_patch_stat_var_autocomplete,
                                                         'serve indicator suggestions locally'),
+    'server.routes.shared_api.stat_var_search_v2': (_patch_stat_var_search_v2,
+                                                    'serve the Statistical Variable Explorer search from local data'),
     'server.lib.nl.explore.params': (_patch_search_threshold, 'raise the search match threshold'),
+    'server.lib.nl.explore.related': (_patch_follow_up_questions,
+                                      'build "Keep exploring" questions from the page\'s own topics'),
     'server.lib.nl.detection.place': (_patch_place_detection, 'add place-name aliases to search'),
     'server.lib.nl.common.utils': (_patch_sample_child_places, 'check places with our data first'),
     'server.lib.nl.fulfillment.base': (_patch_places_to_check, 'check places with our data in explore answers'),

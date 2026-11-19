@@ -31,6 +31,9 @@
     border-radius: 16px; padding: 16px 22px; color: #0b57d0; text-decoration: none; font-size: 1rem;
     line-height: 1.45; box-shadow: 0 1px 2px rgba(60, 64, 67, .1); }
   .gdc-qcard:hover { background: #f1f6fe; box-shadow: 0 1px 4px rgba(60, 64, 67, .2); }
+  .gdc-qsrc { display: block; color: #5f6368; font-size: .8rem; margin-top: 2px; }
+  .gdc-more { margin: 18px 0 0; }
+  .gdc-more a { color: #0b57d0; text-decoration: none; }
   .gdc-vischips { display: flex; flex-wrap: wrap; gap: 12px; }
   .gdc-vischips a { display: inline-flex; align-items: center; gap: 6px; background: #e8f0fe;
     border-radius: 22px; padding: 9px 18px 9px 14px; color: #0b57d0; text-decoration: none; font-size: .95rem; }
@@ -67,6 +70,19 @@
     <h1>{{ t.title }}</h1>
     <p class="gdc-intro">{{ t.introHtml | safe }}</p>
   </section>
+
+  {% if t.cards %}
+  <section>
+    <div class="gdc-qcols">
+      {% set half = ((t.cards | length) + 1) // 2 %}
+      <div class="gdc-qcol">{% for d in t.cards[:half] %}<a class="gdc-qcard" href="{{ d.url }}">{{ d.name }}<span class="gdc-qsrc">{{ d.source }}</span></a>{% endfor %}</div>
+      <div class="gdc-qcol">{% for d in t.cards[half:] %}<a class="gdc-qcard" href="{{ d.url }}">{{ d.name }}<span class="gdc-qsrc">{{ d.source }}</span></a>{% endfor %}</div>
+    </div>
+    {% if t.catalogueCount > t.cards | length %}
+    <p class="gdc-more"><a href="/data#{{ t.id if t.id != 'economics' else 'economy' }}">Browse all {{ t.catalogueCount }} {{ t.title | lower }} datasets</a></p>
+    {% endif %}
+  </section>
+  {% endif %}
 
   {% if t.questions %}
   <section>{{ qcards(t.questions) }}</section>
@@ -108,9 +124,9 @@
   {% endif %}
 
   <p class="gdc-note">
-    Every indicator here comes from a dataset with a publisher-stated licence and
+    Each dataset page shows its publisher, licence and data link, with
     <a href="https://mlcommons.org/croissant/1.1" target="_blank" rel="noopener">Croissant 1.1</a> metadata.
-    Browse them all on the <a href="/data">Data sources</a> page.
+    Browse everything on the <a href="/data">Data sources</a> page.
   </p>
 
   {% if topics | length > 1 %}

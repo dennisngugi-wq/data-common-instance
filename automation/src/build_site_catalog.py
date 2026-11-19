@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import datetime as dt
 import io
 import json
 import re
@@ -8,6 +9,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import catalog as catalog_mod
 import croissant
 import registries
 import registry as registry_mod
@@ -40,9 +42,14 @@ def data_sources(catalog):
     by_topic = {}
     for s in catalog["sources"]:
         for d in s["datasets"]:
-            span = d["first_date"] if d["first_date"] == d["last_date"] else f"{d['first_date']} to {d['last_date']}"
-            facts = f"{d['variables']:,} variable{'s' if d['variables'] != 1 else ''}, {d['places']:,} " \
-                    f"place{'s' if d['places'] != 1 else ''}, {span}; updated {d['refreshed']}."
+            if d.get("catalogue"):
+                facts = "; ".join(x for x in [d["country"], d["domain"], d["format"],
+                                              f"coverage {d['coverage']}" if d.get("coverage") else ""] if x) + "."
+            else:
+                span = d["first_date"] if d["first_date"] == d["last_date"] \
+                    else f"{d['first_date']} to {d['last_date']}"
+                facts = f"{d['variables']:,} variable{'s' if d['variables'] != 1 else ''}, {d['places']:,} " \
+                        f"place{'s' if d['places'] != 1 else ''}, {span}; updated {d['refreshed']}."
             links = [f"Data made available under [{licence_label(d['license'])}]({d['license']})"]
             if d.get("url"):
                 links.append(f"[Publisher's page]({d['url']})")
@@ -72,7 +79,7 @@ def build(store_dir):
         names = {p["dcid"]: p["name"] for p in json.load(f)["places"]}
     names.update({d: n for d, n in (state.get("places_used") or {}).items() if d not in names})
 
-    sources, variables, extra, data_places = {}, {}, {}, set()
+    sources, variables, extra, var_keywords, data_places = {}, {}, {}, {}, set()
     try:
         with open(settings.PROJECT_ROOT / "site" / "static" / "places.json", encoding="utf-8") as f:
             ups = {p["dcid"]: p.get("up") or [] for p in json.load(f)["places"]}
@@ -115,9 +122,12 @@ def build(store_dir):
         entry = sources.setdefault(src["name"], {"name": src["name"], "url": src["url"], "dcid": src["dcid"],
                                                  "aliases": src_names[1:], "datasets": []})
         entry["datasets"].append(ds)
+        kw_words = " ".join(x for x in src_names + [f.dataset.get("name"), f.meta.get("Domain"),
+                                                    f.meta.get("Sub-domain")] if x)
         for d in var_dcids:
             v = by_dcid.get(d)
             variables[d] = {"dcid": d, "name": v.name if v else d, "source": src["name"]}
+            var_keywords[d] = kw_words
         place_names = [names.get(p, p) for p, _ in places.most_common(60)]
         extra[f.dataset_dcid] = {
             "keywords": list(dict.fromkeys(src_names + [f.dataset.get("name")] +
@@ -126,6 +136,24 @@ def build(store_dir):
             "spatialCoverage": [{"@type": "Place", "name": n} for n in place_names[:60]],
             "variableMeasured": [variables[d]["name"] for d in var_dcids[:100]],
         }
+    refreshed = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+    for rec in catalog_mod.stored(store):
+        src = catalog_mod.source_of(rec, reg)
+        entry = sources.setdefault(src["name"], {"name": src["name"], "url": src["url"], "dcid": src["dcid"],
+                                                 "aliases": [], "datasets": []})
+        entry["datasets"].append({
+            "feed": None, "catalogue": True, "dcid": catalog_mod.dataset_dcid(rec, reg), "name": rec["name"],
+            "description": catalog_mod.full_description(rec), "url": rec["url"].split()[0],
+            "license": rec["license_url"].split()[0], "license_name": rec["license"],
+            "data_url": rec["content_url"].split()[0], "format": rec["format"], "country": rec["country"],
+            "place": rec["dcid"], "domain": rec["domain"], "geo_level": rec["geo_level"],
+            "coverage": rec.get("coverage"), "frequency": rec.get("frequency"),
+            "published": rec["published"] if catalog_mod.known(rec.get("published")) else None,
+            "refreshed": refreshed, "rows": 0, "places": 1, "first_date": None, "last_date": None, "variables": 0,
+            "topics": topics_mod.classify([rec["domain"]], f"{rec['name']} {rec['description']}")})
+        extra[catalog_mod.dataset_dcid(rec, reg)] = {
+            "keywords": [x for x in (rec["indicator"], rec["country"], rec["domain"], src["name"]) if x],
+            "spatialCoverage": [{"@type": "Place", "name": rec["country"]}]}
     catalog = {"sources": sorted(sources.values(), key=lambda s: -len(s["datasets"]))}
     for s in catalog["sources"]:
         s["datasets"].sort(key=lambda d: d["name"] or "")
@@ -133,7 +161,8 @@ def build(store_dir):
     idx = {s["name"]: i for i, s in enumerate(src_list)}
     compact = {"sources": src_list,
                "variables": [[v["dcid"], v["name"], idx[v["source"]]]
-                             for v in sorted(variables.values(), key=lambda v: v["name"])]}
+                             for v in sorted(variables.values(), key=lambda v: v["name"])],
+               "keywords": {d: var_keywords[d] for d in sorted(var_keywords)}}
     var_home = {v: c.most_common(1)[0][0] for v, c in sorted(home.items())
                 if c and c.most_common(1)[0][1] >= 0.5 * sum(c.values())}
     return {"catalog.json": catalog, "data_sources.json": data_sources(catalog), "variables.json": compact,

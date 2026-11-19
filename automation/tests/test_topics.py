@@ -46,3 +46,11 @@ class TopicsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_tool_examples_come_only_from_loaded_variables():
+    import build_homepage
+    assert build_homepage.tool_examples({})["timeline_vis_tool_examples.json"] == []
+    out = build_homepage.tool_examples({"Count_X": {"name": "Total X", "places": {"country/KEN": None}}})
+    assert out["map_vis_tool_examples.json"][0]["title"] == "Total X"
+    assert "country%2FKEN" in out["timeline_vis_tool_examples.json"][0]["url"]

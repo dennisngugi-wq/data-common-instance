@@ -84,13 +84,17 @@
     AdministrativeArea3: "Sub-district", City: "City", Country: "Country", Continent: "Continent", Region: "Region",
   };
   function typeLabel(t) { return TYPE_LABELS[t] || ""; }
+  function subtitle(p) {
+    if ((p.level || 0) <= 3 || !p.parent) return "";
+    return p.parent.split(" \u203a ").reverse().join(", ");
+  }
 
   function prediction(p) {
     return {
       place_id: PREFIX + p.dcid,
       description: description(p),
       types: ["political"],
-      structured_formatting: { main_text: p.name, secondary_text: p.parent },
+      structured_formatting: { main_text: p.name, secondary_text: subtitle(p) },
       matched_substrings: [],
       terms: [{ value: p.name, offset: 0 }],
     };
@@ -218,7 +222,7 @@
       row.appendChild(icon);
       row.appendChild(main);
       var sub = document.createElement("span");
-      sub.textContent = [typeLabel(p.type), p.parent].filter(Boolean).join(" · ");
+      sub.textContent = subtitle(p);
       row.appendChild(sub);
       row.addEventListener("mousedown", function (e) { e.preventDefault(); self.select(i); });
       row.addEventListener("mouseenter", function () { self.active = i; self.highlight(); });
@@ -281,6 +285,21 @@
     this.position();
   };
   Autocomplete.prototype.hide = function () { this.box.style.display = "none"; };
+
+  function hideEmptyIdeas() {
+    var heads = document.querySelectorAll("h4");
+    for (var i = 0; i < heads.length; i++) {
+      var h = heads[i];
+      if (h.textContent.trim() !== "Need ideas? Try these:") continue;
+      var box = h.parentElement;
+      var hasLinks = box && box.querySelector("a");
+      box.style.display = hasLinks ? "" : "none";
+    }
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(hideEmptyIdeas).observe(document.documentElement, { childList: true, subtree: true });
+  }
+  document.addEventListener("DOMContentLoaded", hideEmptyIdeas);
 
   var g = (window.google = window.google || {});
   g.maps = g.maps || {};

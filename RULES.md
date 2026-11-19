@@ -12,7 +12,7 @@ Source of the Croissant rules: `mcp agent/knowledge/originals/Croissant Metadata
 
 | Rule | |
 |---|---|
-| D1 | Only sheets you provide: Google Sheets linked in `data/inbox/links.txt` or `config/sheets.json`, or Excel files put in `data/inbox/files/`. The pipeline never scrapes websites, transcribes reports or invents values. |
+| D1 | Only sheets you provide: Google Sheets linked in `data/inbox/links.txt` or `config/sheets.json`, or Excel files put in `data/inbox/files/`. The pipeline never transcribes reports or invents values, and never crawls sites on its own. One exception, authorised by the client: when a catalogue row's data link is a web page (or an inline `data:` link), the pipeline looks only at that listed page and its documented data API to find the real file or API download (rule CAT-RESOLVE). |
 | D2 | A sheet missing something (licence, places, units) is reported; nothing is filled in by guessing. |
 
 ## 2. Croissant metadata (required, from the design doc)
@@ -62,6 +62,36 @@ each Provenance = one `cr:FileObject` + `cr:RecordSet`.
 | N2 | A dataset (same name and same organisation) is loaded once; the second sheet is reported and not loaded. |
 | N3 | A variable whose name is exactly the name of a Data Commons variable uses that variable (referenced, never redefined: V12). The Variables tab column "Data Commons variable" overrides it: an id to choose the variable, `new` to keep a separate one. Two variables of one sheet cannot be the same Data Commons variable. |
 | N4 | A decision under N3 is kept, so a variable's id never changes by itself. If Data Commons cannot be reached for a new variable, the sheet waits for the next refresh instead of creating a copy. |
+
+## 6. Catalogue sheets (the standard Excel format)
+
+Every Excel file in `data/inbox/files/` looks like `Country × Indicator Dataset Exploration - Final Output.xlsx`: one
+row per dataset (country x indicator), on any tab that has the columns below. Tabs without them (e.g. `Tracker`) are
+ignored. Code: `automation/src/catalog.py` (`python3 src/catalog.py`). Result per file: `local_store/catalogue/<file>/`
+(`datasets.json` = accepted rows, `rejected.json` = rows with the rule that failed and the line number).
+
+| Column | Maps to | Rule |
+|---|---|---|
+| Country, DCID | place | CAT2 required. CAT3: DCID is a Data Commons place id (`country/KEN`). |
+| Domain, Indicator | topic, dataset name | CAT2 required. Dataset name = `Indicator (Country)`. |
+| Dataset Description | `description` | CAT2 required; C2: 50-5000 characters. |
+| Creator, Creator URl | `creator` | CAT2 required; C5: the original publisher, name and full URL. |
+| URL/Source Metadata URL | `url` | CAT2 required; C3: full http(s) landing page. |
+| distribution.contentURL | `distribution.contentUrl` | CAT2 required; C6: full http(s) link to a file or data API. Browser `data:` links, text or relative paths are rejected. Several links in one cell are all checked. |
+| distribution.encodingformat | `encodingFormat` | CAT2 required. C6: it must name a file or API format (CSV, XLS, JSON, API...); "Web based" alone means the link is a web page, so the row is rejected. |
+| License, License URL | `license` | CAT2 required; C4: licence URL is a full http(s) URL, stated by the publisher. Never guessed or filled in by us. |
+| Geo Level | place level | CAT2 required. |
+| datePublished | `datePublished` | Optional. `N/A` / `Not Found` is allowed and reported; the refresh date is then used (open point below). |
+| Temporal Coverage, Update Frequency | coverage, frequency | Recommended: a missing value is a warning, not a rejection. |
+| Region, Comments | notes | Not published. |
+
+| Rule | Meaning |
+|---|---|
+| N2 | The same country, indicator and data link twice: the first row is kept, the repeat is rejected with its line number. |
+| CAT-GRAPH | Each accepted row becomes Source > Dataset > Provenance in the graph, as in the Croissant design doc: Provenance (`isPartOf` Dataset, `provenanceCategory: StatisticsProvenance`, `downloadUrl` = contentURL, `license`, `description`, `lastDataRefreshDate` = datePublished, `earliestDataImportDate`, `earliestObservationDate`/`latestObservationDate` from Temporal Coverage years). `/croissant/<dcid>` and the JSON-LD on `/browser/<dcid>` are generated from these nodes (one `cr:FileObject` + `cr:RecordSet` per provenance), never written by hand. |
+| CAT-RESOLVE | A row whose data link is a web page is not rejected at once: `automation/src/resolve.py` looks for the real download in this order: inline `data:` link (decoded and saved as a file served by the site), the portal's data API (Data Browser hub: `POST .../databrowserhub/api/Core/nodes/<n>/datasets/<flow>/data` with `[]`), Our World in Data `.csv`, FRED series `.csv`, CKAN `package_show` resources (HDX, openAFRICA), then file or API links found on the page. Every candidate must return data (CSV, XLS(X), JSON, JSON-stat), never HTML. Links found by hand in a browser are recorded in `config/data_links.yaml` (key: the page link or `Country|Indicator`; fields `download_url`, `format`, `method`, `request`). The result is cached in `local_store/catalogue/resolved.json` (a failed lookup is retried after 7 days). If nothing is found the row is rejected under C6. The licence still comes from the sheet. |
+| CAT-GATE | A row failing any rule above is not loaded or shown anywhere. Fix the row in the sheet; it loads at the next run. Nothing is filled in by guessing (D2). |
+| CAT-OBS | A catalogue row describes where the data is; it carries no observation values, so E2-E9 apply only when its values are loaded in the DataCommon template format. |
 
 ## Open points
 

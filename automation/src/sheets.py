@@ -145,6 +145,9 @@ def _file_entries(config_dir, inbox, listed, problems):
         if p.suffix.lower() != ".xlsx":
             problems.setdefault("config", []).append(f"{rel}: save this file as .xlsx (Excel workbook) to load it")
             continue
+        import catalog
+        if catalog.is_catalogue(p):
+            continue
         out.append((rel, {"id": auto_id(rel), "link": rel, "enabled": True}))
     return out
 

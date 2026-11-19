@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 
+import catalog
 import croissant
 import registry as registry_mod
 import runlog
@@ -71,20 +72,27 @@ def build(store_dir, out_dir, reg=None):
         import registries
         from storage import LocalStore
         reg = registries.add_stored_feeds(registry_mod.load(), LocalStore(store_dir))
+    from storage import LocalStore
     root = Path(store_dir) / settings.DCP_INPUT_ROOT
     schema_files = sorted((root / reg.schema_import).glob("*.mcf"))
-    if not schema_files:
-        raise SystemExit(f"No published schema in {root / reg.schema_import}: run the pipeline first")
     live = [fid for fid in sorted(reg.feeds) if (root / fid / f"{fid}.csv").exists()
             and croissant.publishable(reg.feeds[fid], reg)]
-    if not live:
-        raise SystemExit(f"No published feed imports in {root}")
+    catalogue = catalog.mcf(catalog.stored(LocalStore(store_dir)), reg)
+    if live and not schema_files:
+        raise SystemExit(f"No published schema in {root / reg.schema_import}: run the pipeline first")
+    if not live and not catalogue:
+        raise SystemExit(f"No published feed imports and no catalogue datasets in {root}")
     names = {fid: reg.feeds[fid].provenance.get("name") or fid for fid in live}
     if len(set(names.values())) != len(names):
         raise SystemExit(f"Two feeds share a provenance name: {names}")
     sources, ids = provenance_ids(reg, live)
+    cat_records = catalog.stored(LocalStore(store_dir))
+    pending = catalog.add_provenances(cat_records, reg, sources)
+    ids = {p: f"c/p/{i}" for i, p in enumerate((p for s in sources.values() for p in s["provenances"]), start=1)}
+    cat_prov = catalog.provenance_blocks(pending, reg, ids)
 
-    files = {"schema.mcf": local_schema(p.read_text(encoding="utf-8") for p in schema_files)}
+    schema = local_schema(p.read_text(encoding="utf-8") for p in schema_files) if schema_files else ""
+    files = {"schema.mcf": schema + ("\n" if schema and catalogue else "") + catalogue}
     prov_blocks, input_files = [], {}
     for fid in live:
         files[f"{fid}.csv"] = local_csv((root / fid / f"{fid}.csv").read_text(encoding="utf-8"))
@@ -93,7 +101,7 @@ def build(store_dir, out_dir, reg=None):
             prov_blocks.append(local_provenance(mcf.read_text(encoding="utf-8"), ids[names[fid]]))
         input_files[f"{fid}.csv"] = {"format": "variablePerRow", "provenance": names[fid],
                                      "columnMappings": {c: c for c in CSV_FIELDS}}
-    files["provenance.mcf"] = "\n".join(prov_blocks)
+    files["provenance.mcf"] = "\n".join(prov_blocks + cat_prov)
     files["config.json"] = json.dumps({"inputFiles": input_files, "sources": sources}, indent=2) + "\n"
 
     out = Path(out_dir)
@@ -108,7 +116,7 @@ def build(store_dir, out_dir, reg=None):
         if not path.exists() or path.read_text(encoding="utf-8") != text:
             path.write_text(text, encoding="utf-8", newline="")
             changed.append(name)
-    rows = sum(t.count("\n") - 1 for n, t in files.items() if n.endswith(".csv"))
+    rows = sum(max(t.count("\n") - 1, 0) for n, t in files.items() if n.endswith(".csv"))
     return changed, rows, live
 
 

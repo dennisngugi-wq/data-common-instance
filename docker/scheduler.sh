@@ -121,7 +121,7 @@ refresh() {
   say "  one whose source could not be reached keeps its last good version)"
 
   step 3 "Combine the datasets and update the website files"
-  job dcproject-finalize sh -c 'python automation/src/run_pipeline.py --finalize --no-sync; r=$?;
+  job dcproject-finalize sh -c 'python automation/src/run_pipeline.py --finalize --no-sync; r=$?; python automation/src/catalog.py;
     python automation/src/build_local_dc.py || exit 2; python automation/src/build_place_index.py;
     python automation/src/build_site_catalog.py; python automation/src/build_homepage.py; exit $r'
   frc=$?
