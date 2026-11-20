@@ -4,7 +4,9 @@ A local **Custom Data Commons** that looks and works like datacommons.org, but s
 **00:00 Africa/Nairobi** it re-reads every source (Google Sheets, Excel files, CSV/JSON on websites and APIs,
 statistics-office portals), validates it, publishes only what passes and reloads the site.
 
-- Site: **http://localhost:8090** · MCP server: **http://localhost:8090/mcp**
+- **Site address:** wherever you run it: `http://localhost:<SITE_PORT>` on the machine that runs it (`SITE_PORT` in `.env`,
+  default 8090), `http://<that machine's IP>:<SITE_PORT>` from another computer on the network, or the public address
+  (also set as `SITE_URL` in `.env`) when hosted. MCP server: the site address followed by `/mcp`.
 - Croissant 1.1 JSON-LD for every licensed dataset: `/browser/<dataset dcid>` (in the page) and `/croissant/<dataset dcid>`
 
 ## Where things are
@@ -48,7 +50,7 @@ bash scripts/start.sh
 tail -f logs/pipeline.log             # follow the first load (15-30 min the first time; Ctrl+C stops following only)
 ```
 
-Then open **http://localhost:8090**. The result of each refresh is in `logs/last_refresh.txt`. The site and the
+Then open the site (address above). The result of each refresh is in `logs/last_refresh.txt`. The site and the
 nightly refresh restart by themselves after a reboot (`restart: unless-stopped`); if not, run `bash scripts/start.sh`.
 
 Notes for a fresh clone:
@@ -67,7 +69,7 @@ A public link to a running copy of the site, without a server of your own:
    value your Data Commons API key.
 2. **Code > Codespaces > Create codespace** on this branch (it asks for a 4-core / 16 GB machine). The site starts by
    itself; the first load takes 20-40 minutes (`tail -f logs/pipeline.log`).
-3. **Ports** tab > port **8090** > right-click > **Port visibility > Public**, then share its address
+3. **Ports** tab > the site port (`SITE_PORT`) > right-click > **Port visibility > Public**, then share its address
    (`https://<codespace-name>-8090.app.github.dev`).
 
 The codespace stops after 30 minutes without activity (the link stops working until it is started again) and uses
@@ -76,7 +78,7 @@ your Codespaces hours (free allowance, then paid). For an always-on link, deploy
 ## Everyday commands
 
 The site and the nightly refresh start by themselves when the computer boots (Docker Engine is enabled and the
-containers use `restart: unless-stopped`), so normally you just open http://localhost:8090.
+containers use `restart: unless-stopped`), so normally you just open the site (address above).
 
 **One click:** run `bash scripts/launch.sh --install` once. It adds **DataCommon Project** (with the DC logo) to the
 app menu and the Desktop; clicking it starts anything that is not running and opens the site in the browser.
