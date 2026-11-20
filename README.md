@@ -1,316 +1,271 @@
 # DataCommon Project: our own Data Commons instance
 
 A local **Custom Data Commons** that looks and works like datacommons.org, but serves **our** data. Every night at
-**00:00 Africa/Nairobi** it re-reads every source (Google Sheets, Excel files, CSV/JSON on websites and APIs,
-statistics-office portals), validates it, publishes only what passes and reloads the site.
+**00:00 Africa/Nairobi** the pipeline re-reads the sheets you provide, checks every row against the Croissant rules
+(`RULES.md`), publishes only what passes, reloads the site, and writes a list of everything that failed, with the
+column, the rule and the fix.
 
 - Site: **http://localhost:8090** · MCP server: **http://localhost:8090/mcp**
-- Croissant 1.1 JSON-LD for every licensed dataset: `/browser/<dataset dcid>` (in the page) and `/croissant/<dataset dcid>`
+- Croissant 1.1 JSON-LD for every dataset: `/browser/<dataset dcid>` (in the page) and `/croissant/<dataset dcid>`
+
+## The idea in one minute
+
+1. You provide a spreadsheet: an **Excel (`.xlsx`) or CSV catalogue**, one row per dataset (country × indicator).
+2. You drop it in `imports/data/inbox/files/` and start a refresh.
+3. The pipeline checks each row. A row that breaks any rule is **not loaded anywhere** (not in the graph, the search,
+   the Data sources page or the dataset pages). A row that passes becomes **Source → Dataset → Provenance** nodes.
+4. Every run writes `imports/data/outbox/<file> - failures to fix.xlsx`: one line per broken rule, with the line in
+   your file, the column, the rule, the current value and the fix needed. Fix the sheet, drop it in again, refresh.
+
+Data comes only from sheets you provide. The pipeline never scrapes, transcribes reports or invents values. The one
+authorised exception is **CAT-RESOLVE**: when a row's data link is a web page, the pipeline looks at that listed page
+and its documented data API to find the real download (see "Finding the real download").
 
 ## Where things are
 
 | You want to | Go to |
 |---|---|
-| Add data | Google Sheets: paste the links in `data/inbox/links.txt` (one per line or separated by commas). Excel: drop the `.xlsx` files in `data/inbox/files/`. Nothing else to edit |
-| Load it now | `docker compose exec scheduler refresh` (or `bash scripts/refresh-now.sh`) |
-| Know what a dataset must have | [`RULES.md`](RULES.md): the pipeline rules, from the Croissant design doc |
-| Know when a refresh failed | `logs/ALERT.txt` (present only while there is a problem), `logs/alerts.log` (history), a chat message if `ALERT_WEBHOOK_URL` is set |
-| Host it on Google Cloud | `bash scripts/gcp-deploy.sh` (see "Host it on Google Cloud") |
-| Read what happened | `logs/pipeline.log` (latest run), `logs/history/` (every run), `logs/pipeline-details.log`, `logs/loader.log`, `logs/last_refresh.txt` |
-| See every check of a dataset | `work/feed_reports/<id>.json`, `work/validation_summary.json` |
+| Add a catalogue | Put the `.xlsx` or `.csv` in `imports/data/inbox/files/` (nothing else to edit) |
+| Load it now | `bash pipeline/scripts/refresh-now.sh` (or `docker compose exec scheduler refresh`) |
+| See what failed and how to fix it | `imports/data/outbox/<file> - failures to fix.xlsx` |
+| See your sheet with the result per row | `imports/data/outbox/<file> - checked.xlsx` (`.xlsx` input only) |
+| Know the rules | [`RULES.md`](RULES.md): the pipeline rules, from the Croissant design doc |
+| Read what happened | `pipeline/logs/pipeline.log` (latest run), `pipeline/logs/catalogue.log` (every row), `pipeline/logs/history/` (every run), `pipeline/logs/last_refresh.txt` |
+| Know when a refresh failed | `pipeline/logs/ALERT.txt` (only while there is a problem), `pipeline/logs/alerts.log` (history) |
+| Validate a provenance sheet | `pipeline/src/provenance_check.py` (see "Checking a provenance sheet") |
 | Change the pipeline | `pipeline/src/` (code), `pipeline/tests/` (tests) |
-| Change the website | `site/` (see `site/README.md`) |
-| Settings | `config/` (instance, sources, places, registries, custom feeds) |
+| Change the website | `pipeline/site/` (see `pipeline/site/README.md`) |
+| Settings | `pipeline/config/` (instance, sources, places, registries, custom feeds, `data_links.yaml`) |
 | Notes and decisions | `../../mcp agent/knowledge/` (`INDEX.md`, `decisions.md`) |
-| Data on disk | `local_store/` (validated datasets), `local_dc/` (database input), `local_dc_db/` (live database) |
 
-## Run it on a new machine
+## Folder layout
 
-**You need:** Linux (Ubuntu 22.04+ tested) or WSL2, **Docker Engine** with the Compose plugin, git, about
-**15 GB** free disk (images ~9 GB + data) and **8 GB RAM** (the website alone uses ~4 GB), internet access, and a
-free **Data Commons API key** from https://apikeys.datacommons.org.
+```
+datacommon-project/
+├── RULES.md                      the rules every dataset must pass (the law of the pipeline)
+├── docker-compose.yml, .env, env.list
+├── imports/                      everything that comes in or goes out (data, not code)
+│   ├── data/inbox/files/         your catalogue files (.xlsx, .csv); git-ignored
+│   ├── data/inbox/links.txt      optional: Google Sheet / download links
+│   ├── data/outbox/              failures to fix, checked copies; git-ignored
+│   ├── data/archive/             files you moved out of the inbox; git-ignored
+│   ├── templates/                DataCommon_dataset_template.xlsx (sheets with values)
+│   ├── local_store/              validated rows, resolve cache, state, backups, reports; git-ignored
+│   ├── local_dc/                 database input (schema.mcf, provenance.mcf); git-ignored
+│   └── local_dc_db/              the live database; git-ignored
+└── pipeline/                     everything that runs
+    ├── src/                      code (catalog.py, resolve.py, build_local_dc.py, ...)
+    ├── config/                   instance.yaml, sources.yaml, places.yaml, sheets.json, feeds/, registries/
+    ├── site/                     website customisation
+    ├── docker/                   scheduler.sh and the `refresh` command
+    ├── scripts/                  start.sh, refresh-now.sh, launch.sh, check-feed.sh, gcp-deploy.sh, ...
+    ├── tests/                    unit tests
+    ├── logs/, work/              refresh logs, raw downloads, run reports; git-ignored
+    └── Dockerfile, requirements.txt
+```
+
+## Commands you run yourself
 
 ```bash
-# 1. Docker Engine (skip if `docker compose version` already works)
-curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker "$USER"      # then log out and back in
-sudo systemctl enable --now docker
-
-# 2. Get the project
-git clone https://github.com/dennisngugi-wq/data-common-instance.git
-cd data-common-instance
-
-# 3. Settings: put your key in env.list (no quotes, no spaces around =)
-cp env.list.example env.list
-nano env.list                         # DC_API_KEY=<your key>
-cp .env.example .env                  # optional: change SITE_PORT, refresh time (start.sh fills in the paths)
-
-# 4. Start: downloads the images, builds the pipeline, fetches and validates every dataset, loads them, starts the site
-bash scripts/start.sh
-tail -f logs/pipeline.log             # follow the first load (15-30 min the first time; Ctrl+C stops following only)
+export DOCKER_CONTEXT=default                      # use Docker Engine, not Docker Desktop
+docker compose up -d scheduler                     # start the background service (once; it restarts after a reboot)
+cp "my catalogue.xlsx" imports/data/inbox/files/   # drop a catalogue file in the inbox
+bash pipeline/scripts/refresh-now.sh               # run the ingestion (starts within a minute, takes about 6 minutes)
+tail -f pipeline/logs/pipeline.log                 # follow it; the result is in pipeline/logs/last_refresh.txt
 ```
 
-Then open **http://localhost:8090**. The result of each refresh is in `logs/last_refresh.txt`. The site and the
-nightly refresh restart by themselves after a reboot (`restart: unless-stopped`); if not, run `bash scripts/start.sh`.
-A computer that is off at midnight refreshes as soon as it is started again.
+When it finishes: the site is at http://localhost:8090 and the failures list is in `imports/data/outbox/`.
 
-Notes for a fresh clone:
-- The repository holds code and configuration, not the database: the first start rebuilds all data from the sources.
-- `insp_ebola_drc` reads a local file (`data/inbox/insp_ebola/ebola_drc_provinces.csv`) that is not in the repository
-  (no licence from the publisher). Without it that one dataset is reported as missing; the others load normally.
-- If Docker Desktop is also installed, opening it switches the `docker` command to Desktop's own engine; the scripts
-  always use Docker Engine, and `docker context use default` switches your terminal back.
-- Port 8090 already taken? Set `SITE_PORT` in `.env`.
-
-## Share it from GitHub Codespaces
-
-A public link to a running copy of the site, without a server of your own:
-
-1. Once: repository **Settings > Secrets and variables > Codespaces > New repository secret**, name `DC_API_KEY`,
-   value your Data Commons API key.
-2. **Code > Codespaces > Create codespace** on this branch (it asks for a 4-core / 16 GB machine). The site starts by
-   itself; the first load takes 20-40 minutes (`tail -f logs/pipeline.log`).
-3. **Ports** tab > port **8090** > right-click > **Port visibility > Public**, then share its address
-   (`https://<codespace-name>-8090.app.github.dev`).
-
-The codespace stops after 30 minutes without activity (the link stops working until it is started again) and uses
-your Codespaces hours (free allowance, then paid). For an always-on link, deploy to a server.
-
-## Host it on Google Cloud
-
-One always-on virtual machine (Compute Engine) running the same Docker setup, so the refresh really happens at
-00:00 Africa/Nairobi every night. You need a Google Cloud project with billing and the Google Cloud CLI.
+Other commands:
 
 ```bash
-gcloud auth login
-gcloud config set project <project id>
-bash scripts/gcp-deploy.sh            # creates the VM, a fixed IP and the port-80 rule, copies the project, starts it
-bash scripts/gcp-deploy.sh --status   # last refresh, any alert, containers
-bash scripts/gcp-deploy.sh --logs     # the latest refresh log
+bash pipeline/scripts/start.sh                     # start (or rebuild and start) the instance
+bash pipeline/scripts/start.sh --stop              # stop (data is kept)
+bash pipeline/scripts/launch.sh                    # start what is not running, then open the site
+bash pipeline/scripts/check-feed.sh my_sheet       # try a values sheet from sheets.json without publishing
+docker compose --profile jobs run --rm -T pipeline python -m unittest discover -s pipeline/tests   # the tests
+docker ps -a --filter name=dcproject               # containers; "Exited (0)" dataset jobs are normal
 ```
 
-Run `bash scripts/gcp-deploy.sh` again to send newer code, `env.list` or files in `data/inbox/` to the VM (it refuses
-while a refresh is running). Settings, as environment variables: `GCP_ZONE` (default `africa-south1-a`), `GCP_MACHINE`
-(`e2-standard-2`, 8 GB; use `e2-standard-4` if loads are slow), `GCP_DISK_GB` (50), `GCP_VM` (`datacommon-project`),
-`SITE_URL` (default `http://<the VM's fixed IP>`; set it to your own address once a domain points at the VM). The site
-address goes into the Croissant metadata, so set `SITE_URL` before sharing dataset pages. The site is served over plain
-HTTP on port 80; HTTPS needs a domain and a proxy or load balancer in front. Remove everything with
-`gcloud compute instances delete datacommon-project`, `gcloud compute addresses delete datacommon-project-ip` and
-`gcloud compute firewall-rules delete datacommon-project-web`.
+The website starts only if a database exists. After a full reset (an empty `imports/local_dc_db/`) it stays down until a
+refresh has loaded at least one accepted row.
 
-## Alerts when a refresh fails
+## The catalogue format
 
-A refresh that fails (the datasets cannot be combined, the database cannot be built, the API key is missing), or one
-where at least half of the datasets could not be downloaded, writes the reason to `logs/ALERT.txt` and adds a line to
-`logs/alerts.log`. The file disappears after the next good refresh (`RECOVERED` in `alerts.log`). The one-click
-launcher shows it as a desktop notification. To also get a chat message (Slack, Google Chat or any webhook that accepts
-`{"text": ...}`), add `ALERT_WEBHOOK_URL=<webhook address>` to `env.list`; try it with
-`docker compose run --rm pipeline python pipeline/src/alert.py "test"`. Single datasets that fail a rule are not
-alerts: they are listed under NEEDS YOUR ATTENTION in `logs/pipeline.log`.
+Every catalogue file looks like `Country × Indicator Dataset Exploration - Final Output.xlsx`: one row per dataset,
+on any tab (or in any CSV) that has the columns below. Tabs without them (for example `Tracker`) are ignored. CSV may be
+UTF-8 or Excel's Windows encoding. Row numbers in every report are the line numbers of your file.
 
-## Everyday commands
-
-The site and the nightly refresh start by themselves when the computer boots (Docker Engine is enabled and the
-containers use `restart: unless-stopped`), so normally you just open http://localhost:8090.
-
-**One click:** run `bash scripts/launch.sh --install` once. It adds **DataCommon Project** (with the DC logo) to the
-app menu and the Desktop; clicking it starts anything that is not running and opens the site in the browser.
-
-```bash
-bash scripts/launch.sh               # start what is not running, then open the site (what the icon does)
-bash scripts/start.sh                # start (or rebuild and start) the instance
-bash scripts/start.sh --stop         # stop (data is kept)
-docker compose exec scheduler refresh  # refresh now instead of at midnight (starts within a minute)
-bash scripts/refresh-now.sh          # the same, from the project folder
-bash scripts/check-feed.sh my_sheet  # try a sheet from config/sheets.json without publishing anything
-tail -f logs/pipeline.log            # follow a refresh (see "Reading the refresh log" below)
-docker ps -a --filter name=dcproject # containers; "Exited (0)" dataset jobs are normal (they run, then stop)
-```
-
-## Adding data: `data/inbox/links.txt` or `config/sheets.json`
-
-All data comes from spreadsheets you provide (Google Sheets or Excel); the pipeline never scrapes or invents data.
-
-- **Google Sheets / download links:** paste the links in **`data/inbox/links.txt`**, one per line or several on a
-  line separated by commas. No id is needed (one is made from the link and stays the same as long as the link does).
-- **Excel files:** drop the `.xlsx` files in **`data/inbox/files/`** (any folder under `data/inbox/` works). They are
-  found by themselves; the file name becomes the id, so do not rename a file after it is loaded.
-- Then run `docker compose exec scheduler refresh`, or wait for midnight. On Google Cloud, run
-  `bash scripts/gcp-deploy.sh` again: it sends the current `data/inbox/` (new, changed and removed files) to the VM.
-
-**No duplicates.** The same link is loaded once; two sheets with the same dataset name and organisation are loaded
-once (the second is reported). A variable whose name is exactly the name of a Data Commons variable uses that
-variable instead of creating a copy (for example `Total population` becomes `Count_Person`), so it appears in the
-tools next to the data Data Commons already has. The log line "Uses existing Data Commons variables" lists them. To
-choose yourself, fill the column **Data Commons variable** in the Variables tab: the variable's id, or `new` to keep
-your own. A decision, once made, is kept (`local_store/sheets/<id>/dc_variables.json`), so ids never change by
-themselves. Other variables are created in this instance's own namespace (`DCProject_...`), which can never collide
-with Data Commons.
-
-The permanent, hand-written list is [`config/sheets.json`](config/sheets.json) (needed only to switch a sheet off,
-or for `registry` / `custom` sheets); an id may appear only once across all of them:
-
-```json
-{ "sheets": [
-    { "id": "kenya_county_population",
-      "link": "https://docs.google.com/spreadsheets/d/1AbC.../edit#gid=0",
-      "enabled": true,
-      "note": "KNBS census 2019 tables" }
-] }
-```
-
-1. **Fill in the template** [`templates/DataCommon_dataset_template.xlsx`](templates/) (for Google Sheets: upload
-   it to Drive and open it with Google Sheets). Tab **About**: dataset name, description, source organisation,
-   licence. Tab **Data**: `Place | Date | Variable | Value | Unit`, one row per number (or one column per variable).
-   Tab **Variables** (optional): description, unit, min/max and the Data Commons variable per variable.
-2. **Share** a Google Sheet as "Anyone with the link: Viewer" and paste its link in `data/inbox/links.txt`; put an
-   Excel file in `data/inbox/files/`.
-3. **Try it** (publishes nothing): `bash scripts/check-feed.sh <id>`; the id is printed in the refresh log (for a
-   file it is the file name in lowercase with `_`, for a Google Sheet `gs_...`).
-   The report names any cell to fix (missing dataset name, unknown place, a value that is not a number, ...).
-4. **Load it**: `docker compose exec scheduler refresh` (or wait for the nightly run). Then it is on the site: search,
-   Explore, Data sources, the homepage topics.
-
-Edit the sheet any time: the next run picks up the changes. `"enabled": false` stops loading it.
-
-| `kind` | When | Extra file |
+| Column | Meaning | Rule |
 |---|---|---|
-| `dataset` (default) | a sheet in the DataCommon template | none |
-| `registry` | a sheet listing many datasets, one per row, each with a link to its data (e.g. the ZIMSTAT sheet) | `config/registries/<id>.yaml`: which columns hold what (written once) |
-| `custom` | a sheet in its own layout that cannot be put in the template | `config/feeds/<id>.yaml`: the column mapping (written once; templates in `config/feeds/templates/`) |
+| Country | place name | required (CAT2) |
+| **DCID** | the Data Commons place id of the country, e.g. `country/KEN`, `country/NGA`, never the country name | required (CAT2); must look like `country/XXX` (CAT3) |
+| Domain, Indicator | topic and what is measured. Dataset name = `Indicator (Country)` | required (CAT2) |
+| Dataset Description | `description` | required; **50 to 5000 characters** (C2) |
+| Creator, Creator URL | the original publishing organisation, name and full URL | required; full http(s) URL (C5) |
+| URL/Source Metadata URL | `url`: the dataset's landing page | required; full http(s) URL (C3) |
+| distribution.contentURL | `contentUrl`: a real file or data API, **never a landing page** | required; full http(s) URL (C6) |
+| distribution.encodingformat | the format: CSV, XLS, XLSX, JSON, API... | required; "Web based" alone means a web page (C6) |
+| Geo Level | place level (National, ...) | required (CAT2) |
+| License, License URL | licence stated by the publisher, and the link to its terms | required; full http(s) URL, **never guessed** (C4) |
+| datePublished | publisher's release date | optional: `N/A` uses the refresh date and is reported |
+| Temporal Coverage, Update Frequency | coverage years, frequency | recommended: a gap is a warning |
+| Region, Comments | notes | not published |
 
-The link and the on/off switch always live in `sheets.json`; the extra files only say how to read a sheet.
-A new organisation is added automatically from the About tab (name + website); known ones (and their acronyms) are
-matched through `config/sources.yaml`. Every dataset must meet the Croissant rules before it is loaded: official
-name, factual description of 50-5000 characters, landing-page URL, creator, and a licence URL that the publisher
-explicitly applies to the dataset, with where it is stated. Licences are never guessed or inferred: a dataset
-without one is not loaded into the database, the search or the Data sources page. Its downloaded copy is kept, and it
-loads on the next refresh after the licence is filled in on its sheet.
+Several links in one cell are all checked. Browser `data:` links, text and relative paths are rejected.
+N2: the same country, indicator and data link twice: the first row is kept, the repeat is rejected with its line number.
 
-## The data: a brief history
+## How a row becomes Source → Dataset → Provenance
 
-| Date | What |
+This is the Croissant design: Source = `creator`, Dataset = `sc:Dataset`, each Provenance = one `cr:FileObject` +
+`cr:RecordSet`. All nodes live in our namespace `DCProject` (V12: nothing outside it is ever written).
+
+| Node | Built from | Properties |
+|---|---|---|
+| **Source** `DCProjectSource_cat_<creator>` (or a known source in `config/sources.yaml`) | Creator, Creator URL | `typeOf: Source`, `name`, `url` |
+| **Dataset** `DCProjectDataset_cat_<id>` | Country, Indicator, description, URL, License URL | `typeOf: Dataset`, `name` (`Indicator (Country)`), `description`, `url`, `license`, `isPartOf` → Source |
+| **Provenance** | contentURL, license, dates | `isPartOf` → Dataset, `provenanceCategory: StatisticsProvenance`, `description`, `license`, `downloadUrl` (= contentURL), `lastDataRefreshDate` (= datePublished, else the refresh date), `earliestDataImportDate`, `earliestObservationDate` / `latestObservationDate` from the years in Temporal Coverage |
+
+`<id>` is made from the country code and the indicator and stays the same while those do. The place DCID in the sheet
+is checked, never rewritten. `/croissant/<dcid>` and the JSON-LD on `/browser/<dcid>` are generated from these nodes
+(Croissant 1.1, `conformsTo http://mlcommons.org/croissant/1.1`; the original publisher is the `creator`, this instance is
+the `publisher`), never written by hand. A catalogue row carries no observation values, so the site shows the dataset and
+its metadata; statistical variables appear when values are loaded from a data link in the template format.
+
+## Finding the real download (CAT-RESOLVE)
+
+If a row's data link is a web page or an inline `data:` link, the pipeline does not reject it at once. It looks only at
+the listed page and its documented data API, in this order, and keeps the first candidate that really returns data (CSV,
+XLS(X), JSON, JSON-stat; never HTML):
+
+1. an inline `data:` link (decoded and saved under `pipeline/site/static/catalogue_data/`)
+2. the Data Browser hub API (`POST .../databrowserhub/api/Core/nodes/<n>/datasets/<flow>/data` with `[]`)
+3. **Knoema / Open Data for Africa** (`*.opendataforafrica.org`, `*.knoema.com`): the dataset id and `accesskey` are read
+   from the page link and the site's pivot API (`POST /api/1.0/data/pivot/`) is used. This avoids the page, which blocks scripted access
+4. Our World in Data `.csv`, FRED series `.csv`
+5. CKAN `package_show` resources (HDX, openAFRICA)
+6. file or API links found on the page
+
+Links found by hand in a browser go in `pipeline/config/data_links.yaml` (key: the page link or `Country|Indicator`;
+fields `download_url`, `format`, `method`, `request`). Results are cached in `imports/local_store/catalogue/resolved.json`
+(a failed lookup is retried after 7 days). If nothing is found the row is rejected under C6. The licence still comes
+from the sheet.
+
+Known limits: a Knoema dataset the API calls "very large" needs a link filtered to the one indicator; a Knoema dataset
+that says "doesn't exist or you don't have access" needs an `accesskey=` in the link; pages that only show an HTML
+table, a chart or a PDF are not a download.
+
+## The failures list
+
+Each run writes, per input file, to `imports/data/outbox/`:
+
+- **`<file> - failures to fix.xlsx`**: tab **To fix**: tab, line in file, country, indicator, **column**, **rule
+  broken**, what is wrong, current value, **fix needed**, data link. Other tabs: Summary by rule, Warnings (loaded
+  rows), Run. Filter by country or rule and hand the lines to whoever owns the sheet.
+- `<file> - checked.xlsx` (`.xlsx` input): your sheet unchanged, plus columns Pipeline status (Loaded / Not loaded),
+  Pipeline reason, the original link, how the download link was found and the download request.
+
+`pipeline/logs/catalogue.log` has the same detail as text, and each run is kept in `pipeline/logs/history/`.
+
+| Code | What it means |
 |---|---|
-| 2026-11-13 | Instance created (namespace `DCProject`, port 8090). First feeds: **World Bank WDI total population** (JSON API, 216 places, 1960-2025) and **Our World in Data CO2 emissions per capita** (CSV, 219 places, 1750-2025; one reviewed exclusion, Sint Maarten 1956). Both CC BY 4.0. |
-| 2026-11-13 | **ZIMSTAT registry**: the team sheet listing 99 Zimbabwe National Statistics Agency datasets (all 4 tabs mirrored); each row is loaded as its own dataset from ZIMSTAT's JSON-stat API: population, labour force, prices (CPI, PPI), national accounts, livestock, crops, trade, migration, vital statistics. |
-| 2026-11-13 | **INSP Ebola (DRC)**: provincial snapshot of the INSP situation report of 2026-07-14 (Ituri, Nord-Kivu, Sud-Kivu). |
-| 2026-11-13 | Search improvements: only answers with a variable that really matches the question, local place names (DRC, Nord-Kivu, Zimbabwe provinces), suggestions that keep up while a page loads. |
+| CAT2 | a required column is empty |
+| CAT3 | the DCID is not a place id like `country/KEN` |
+| C2 | description is not 50-5000 characters |
+| C3 / C4 / C5 / C6 | Source URL / License URL / Creator URL / data link is not a full http(s) URL, or the data link is a web page |
+| N2 | duplicate row (same country, indicator, data link) |
 
-**Now:** 100 datasets live from 4 sources, 148,865 observations. Two ZIMSTAT datasets (`DF_LF_28`,
-`MIG_STA_ARR_ALL`) are retried every night because ZIMSTAT's API returns HTTP 500 for them.
-2026-11-16: 98 datasets (97 ZIMSTAT, INSP Ebola) have no licence confirmed by their publisher, so they are no longer
-loaded; only the two licensed datasets are live until their licence URLs are recorded (never guessed).
+## Checking a provenance sheet
 
-**In this repository:** only the two datasets with a confirmed licence are included as data, in `data/published/`
-(see its README for attribution). Everything else is rebuilt from the sources on the first start.
+A provenance sheet (`Provenance_id`, `Dataset DCID`, `Source DCID`, `Source URL`, `SourceDataUrl/Distribution.contentUrl`,
+`License Type`, `License URL`, ...) is a different layout from the catalogue: it is **checked**, not loaded.
 
-## How a refresh works (one main instance, one container per dataset)
+```bash
+docker compose --profile jobs run --rm -T pipeline python pipeline/src/provenance_check.py "imports/data/inbox/files/<file>.xlsx"
+```
 
-All containers belong to the compose project **`dcproject`** (the main instance). In Docker Desktop / Portainer each
-dataset appears as its own container under it, with its own status and logs; a new dataset adds a new container.
+It probes every link (a few thousand take about 15 minutes) and writes `imports/data/outbox/<file> - validation.xlsx`
+(tab **To fix**: row, Provenance_id, column, check, severity, finding, current value, recommended correction). Checks:
+URL reachable; data link is a file or API, not a page or PDF; Source URL is the dataset's landing page, not a homepage;
+License Type is the standard `dcid:Name` form; License URL is a licence page, not a privacy or contact page. A site that
+blocks automated requests is a warning to check in a browser. Licences are never suggested, only where to find them.
+
+## Values sheets (the DataCommon template)
+
+Sheets that carry the numbers themselves still work: fill in `imports/templates/DataCommon_dataset_template.xlsx`
+(tab **About**: dataset name, description, source, licence; tab **Data**: `Place | Date | Variable | Value | Unit`;
+tab **Variables**, optional), put it in `imports/data/inbox/files/` or share a Google Sheet ("Anyone with the link:
+Viewer") and paste its link in `imports/data/inbox/links.txt`. Try it with `bash pipeline/scripts/check-feed.sh <id>`.
+A sheet may also be listed in `pipeline/config/sheets.json` (`{"id", "link", "enabled"}`; needed only to switch one
+off, or for `registry` / `custom` kinds, which need `config/registries/<id>.yaml` or `config/feeds/<id>.yaml`).
+
+- **No duplicates (N1-N4):** the same link is loaded once; the same dataset name and organisation once. A variable named
+  exactly like a Data Commons variable uses it (`Total population` becomes `Count_Person`); the Variables tab column
+  **Data Commons variable** overrides it (an id, or `new`). The decision is kept in
+  `imports/local_store/sheets/<id>/dc_variables.json`. Other variables are created as `DCProject_...`.
+- **Data rules (E1-E9, V10, V12):** unreachable source keeps the last good version (E1); no data, missing columns,
+  unknown places, non-numbers, values outside min/max, two values for one variable+place+date, dates outside
+  `earliest_year..today`, more than 20% of rows vanishing, undefined schema nodes, nodes outside `DCProject`. Never widen
+  a min/max to let a value through: a reviewed exception goes in `exclude:` with a reason.
+- **Places:** `pipeline/config/places.yaml` aliases → built-in gazetteer → official children in Data Commons → the
+  resolve API (cached in `imports/local_store/state/place_cache.json`).
+
+## How a refresh works
+
+All containers belong to the compose project **`dcproject`**.
 
 ```
-dcproject-scheduler            midnight / start-up / refresh-now trigger
- ├─ dcproject-sync-registries  download every registry workbook, mirror all tabs, log added/removed/changed rows
- ├─ dcproject-data-<feed>      one per dataset: fetch -> map -> validate -> publish (or keep the last good version)
- ├─ dcproject-finalize         shared schema (once), run report, knowledge base, merge for the loader, place index,
- │                             homepage questions -> work/local_dc_status.txt CHANGED / UNCHANGED
+dcproject-scheduler            daily at REFRESH_AT_UTC (21:00 UTC = 00:00 Nairobi) / start-up / refresh trigger
+ ├─ dcproject-sync-registries  download every registry workbook
+ ├─ dcproject-data-<feed>      one per values sheet: fetch -> map -> validate -> publish (or keep the last good version)
+ ├─ dcproject-finalize         shared schema, then catalog.py (catalogue rows, resolve, failures list),
+ │                             build_local_dc, place index, site catalogue, homepage -> work/local_dc_status.txt
  ├─ loader                     only if CHANGED: load into local_dc_db_next/
  └─ dcproject-website-1        swapped to the new database only after "Runner finished successfully"
 ```
 
-### Reading the refresh log
+`pipeline/logs/pipeline.log` has a header, five numbered steps (read the links; check each dataset; combine and update
+the website files; load the database; website), then a summary with NEEDS YOUR ATTENTION. Marks: `✓` fine, `✗` failed,
+`!` warning, `i` note, `-` skipped. If a refresh fails (datasets cannot be combined, database cannot be built, API key
+missing, or half the sources unreachable), the reason goes to `pipeline/logs/ALERT.txt` and `alerts.log`; add
+`ALERT_WEBHOOK_URL=<address>` to `env.list` for a chat message. Rows that fail a rule are not alerts: they are in the
+failures list.
 
-`logs/pipeline.log` is written for people: a header, five numbered steps, then a summary.
+Do not replace `pipeline/docker/scheduler.sh` or restart the scheduler while a refresh is running.
 
+## Run it on a new machine
+
+**You need:** Linux (Ubuntu 22.04+ tested) or WSL2, **Docker Engine** with the Compose plugin, git, about **15 GB**
+free disk and **8 GB RAM**, internet access, and a free **Data Commons API key** from https://apikeys.datacommons.org.
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh        # Docker Engine (skip if `docker compose version` works)
+sudo usermod -aG docker "$USER"                    # then log out and back in
+git clone https://github.com/dennisngugi-wq/data-common-instance.git
+cd data-common-instance
+cp env.list.example env.list && nano env.list      # DC_API_KEY=<your key>
+cp .env.example .env                               # optional: SITE_PORT, refresh time
+bash pipeline/scripts/start.sh                     # pulls images, builds, loads, starts the site
+tail -f pipeline/logs/pipeline.log
 ```
-STEP 1 of 5  Read the links (config/sheets.json, data/inbox/) and download the sheets
-STEP 2 of 5  Check and prepare each dataset (102)     one line per dataset, e.g.
-  [ 12/102] zimstat_df_pop_proj    UPDATED    58,653 values · 49 places · 2022 to 2042 · +2,394 new · 9s
-            Population Projection by districts
-STEP 3 of 5  Combine the datasets and update the website files
-STEP 4 of 5  Load the data into the database          (skipped when nothing changed)
-STEP 5 of 5  Website
-SUMMARY      counts, NEW DATA PUBLISHED, NEEDS YOUR ATTENTION (each problem once, with its datasets and what to do)
-RESULT       one line: did the website change, and how long the run took
-```
 
-Dataset states: `UPDATED` (new data now on the website), `UNCHANGED`, `FAILED` (breaks a rule in RULES.md: not on
-the website; only a source that could not be reached keeps its last good version), `NEW DATA` (check mode only: would be updated). Marks: `✓` fine, `✗` failed, `!` warning, `i` note,
-`-` skipped. Problems that hit many datasets (no internet, a missing licence) are grouped in the summary instead of
-being repeated per dataset.
+The repository holds code and configuration, not data or the database. Put your catalogue in
+`imports/data/inbox/files/` and refresh. If Docker Desktop is installed, opening it switches the `docker` command to its
+own engine; `docker context use default` switches back. Port 8090 taken: set `SITE_PORT` in `.env`.
 
-| File | What is in it |
-|---|---|
-| `logs/pipeline.log` | the readable log of the latest refresh |
-| `logs/history/<date>_<time>.log` | the same log for every earlier refresh (last 60 kept) |
-| `logs/pipeline-details.log` | technical messages: download retries, tracebacks, Docker output |
-| `logs/loader.log` | the database loader (Data Commons' own output) |
-| `logs/last_refresh.txt` | one line: when the last refresh ended and whether it worked |
-| `work/feed_reports/<id>.json`, `work/validation_summary.json` | every check result, in full |
+**GitHub Codespaces:** add the secret `DC_API_KEY` (Settings > Secrets and variables > Codespaces), create a codespace
+(4 cores / 16 GB), then make port **8090** public in the Ports tab. It stops after 30 minutes idle.
 
-`docker compose logs -f scheduler` shows only the step headings.
-
-Validation (full text in [`RULES.md`](RULES.md); a failing dataset is never published, the others still are):
-
-| Rule | Meaning |
-|---|---|
-| C1-C6 | Croissant: name, description 50-5000 chars, landing URL, licence URL + evidence, creator, download URL; a dataset failing any of them is not loaded |
-| E1 | source unreachable or unreadable (last good version stays live, retried next night) |
-| E2-E8 | no data; missing columns; unknown places; non-numbers / bad dates; outside min/max; two values for one variable+place+date; dates outside earliest_year..today (projections need `allow_future`) |
-| E9 | rows vanish vs. what is published (> 20% by default): protects against an emptied sheet or truncated download |
-| V10 | every project dcid referenced in the schema is defined |
-| V12 | **no node outside our namespace (`DCProject...`) is ever written**: existing Data Commons nodes (`dc/s/WorldBank`, `Count_Person`, ...) are referenced, never redefined, so loading this instance into another Data Commons can never change its data |
-| warnings | large revisions, ambiguous places (both skipped), unmapped labels, skipped non-place codes |
-
-Reviewed exclusions go in the feed file (`exclude:` with a reason); never widen a min/max to let a value through.
-
-### Places
-Names and codes are matched to Data Commons places: `config/places.yaml` aliases → built-in gazetteer (World,
-continents, UN M49 regions, 215 countries) → for sub-national places, the official list of children in Data Commons
-(e.g. Zimbabwe's 10 provinces) → the resolve API (cached in `local_store/state/place_cache.json`). The resolve API
-alone is not trusted for provinces: it maps "Bulawayo" to the city, not Bulawayo Province. Codes that are not areas
-of the publisher (e.g. destination countries of Zimbabwean labour migrants, hospitals) are skipped and reported.
-
-### Registry datasets (JSON-stat / SDMX)
-One statistical variable per combination of the dimensions that vary (e.g. sex × age), named
-`<dataset>: <member labels>`, grouped Source → sub-domain → dataset in the variable explorer; `UNIT_MEASURE` becomes
-the unit; quarterly periods are stored as the quarter's first month with `observationPeriod P3M` (the Data Commons
-convention); cubes that mix frequencies get one variable per frequency.
-
-## Files
-
-| Path | What |
-|---|---|
-| `config/instance.yaml` | name, namespace (`DCProject`: never change after the first load), site URL, validation limits |
-| `config/sources.yaml`, `config/places.yaml` | organisations (+ aliases), place aliases |
-| `config/sheets.json` | **the list of sheets to load** (links + on/off) |
-| `templates/DataCommon_dataset_template.xlsx` | the sheet layout loaded with no other configuration |
-| `config/feeds/*.yaml`, `config/feeds/templates/` | column mappings of `custom` sheets (and the starter feeds) |
-| `config/registries/*.yaml` | how to read `registry` sheets |
-| `pipeline/src/` | pipeline (`run_pipeline.py`), readers (`fetch.py`, `jsonstat.py`), `normalize.py`, `build_dcp.py` (DCP imports), `build_local_dc.py`, `croissant.py`, `knowledge.py`, `registries.py` |
-| `pipeline/tests/` | `docker compose run --rm pipeline python -m unittest discover -s pipeline/tests` |
-| `RULES.md` | the rules every dataset must pass |
-| `data/inbox/` | your links (`links.txt`, `*.json`) and Excel files (git-ignored) |
-| `logs/` | refresh logs and their history (git-ignored) |
-| `pipeline/src/readback_local.py` | every published value read back through the site API and compared with what was loaded, per source (`docker compose run --rm pipeline python pipeline/src/readback_local.py --url http://website:8080` prints READBACK PASS) |
-| `site/` | website customization (see `site/README.md`) |
-| `data/published/` | snapshot of the licensed datasets (CSV + MCF, CC BY 4.0) |
-| `local_store/` | published DCP imports (GCS-bucket layout), state, backups (the last 30 changes are kept), run reports (last 90), registry mirrors |
-| `work/` | raw downloads, per-dataset reports, `validation_summary.json`, Croissant previews |
+**Google Cloud:** `bash pipeline/scripts/gcp-deploy.sh` creates one always-on VM with the same Docker setup, a fixed IP
+and a port-80 rule, and copies the project and `imports/data/inbox/`; `--status` and `--logs` show the result. Settings:
+`GCP_ZONE`, `GCP_MACHINE`, `GCP_DISK_GB`, `GCP_VM`, `SITE_URL` (set it before sharing dataset pages: it goes into the
+Croissant metadata).
 
 ## Images
-`gcr.io/datcom-ci/datacommons-services:stable` and `datacommons-data:stable` (SQLite, runs fully locally).
-Release **1.1.7** (Oct 2026) moved to the Spanner-based DCP stack: its website needs a GCP project + Spanner and its
-loader no longer writes SQLite, so it cannot serve a local folder. It does contain the upstream Croissant code; the
-`stable` image does not, so `site/app_env/custom.py` backports it. When this instance moves to GCP (DCP), the
-`local_store/ingestion/input/` imports are already in the DCP layout (schema import first).
 
-## Docker Desktop
-On Linux, Docker Desktop runs its own engine in a VM and cannot see Docker Engine containers. `scripts/start.sh` always
-uses Docker Engine; `DOCKER_CONTEXT=desktop-linux bash scripts/start.sh` runs the instance inside Docker Desktop
-instead, after raising Desktop's memory to at least 8 GB (Settings > Resources). `scripts/desktop-copy.sh` makes a
-separate one-click copy for Docker Desktop on port 8091.
+`gcr.io/datcom-ci/datacommons-services:stable` and `datacommons-data:stable` (SQLite, runs fully locally). Release 1.1.7
+moved to the Spanner-based DCP stack and cannot serve a local folder; the `stable` image has no Croissant code, so
+`pipeline/site/app_env/custom.py` backports it.
 
 ## Author
 
