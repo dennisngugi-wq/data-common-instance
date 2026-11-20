@@ -5,7 +5,11 @@ A local **Custom Data Commons** that looks and works like datacommons.org, but s
 (`RULES.md`), publishes only what passes, reloads the site, and writes a list of everything that failed, with the
 column, the rule and the fix.
 
-- Site: **http://localhost:8090** · MCP server: **http://localhost:8090/mcp**
+- **Site address:** wherever you run it.
+  - On the machine that runs it: `http://localhost:<SITE_PORT>` (`SITE_PORT` is set in `.env`; the default is 8090).
+  - From another computer on the same network: `http://<that machine's IP>:<SITE_PORT>`.
+  - Hosted (Google Cloud VM, Codespaces, your own server): the public address, which you also set as `SITE_URL` in `.env`.
+- MCP server: the site address followed by `/mcp`.
 - Croissant 1.1 JSON-LD for every dataset: `/browser/<dataset dcid>` (in the page) and `/croissant/<dataset dcid>`
 
 ## The idea in one minute
@@ -74,7 +78,7 @@ bash pipeline/scripts/refresh-now.sh               # run the ingestion (starts w
 tail -f pipeline/logs/pipeline.log                 # follow it; the result is in pipeline/logs/last_refresh.txt
 ```
 
-When it finishes: the site is at http://localhost:8090 and the failures list is in `imports/data/outbox/`.
+When it finishes, open the site (address above) and take the failures list from `imports/data/outbox/`.
 
 Other commands:
 
@@ -251,10 +255,10 @@ tail -f pipeline/logs/pipeline.log
 
 The repository holds code and configuration, not data or the database. Put your catalogue in
 `imports/data/inbox/files/` and refresh. If Docker Desktop is installed, opening it switches the `docker` command to its
-own engine; `docker context use default` switches back. Port 8090 taken: set `SITE_PORT` in `.env`.
+own engine; `docker context use default` switches back. If the port is taken, set `SITE_PORT` in `.env`.
 
 **GitHub Codespaces:** add the secret `DC_API_KEY` (Settings > Secrets and variables > Codespaces), create a codespace
-(4 cores / 16 GB), then make port **8090** public in the Ports tab. It stops after 30 minutes idle.
+(4 cores / 16 GB), then make the site port (`SITE_PORT`) public in the Ports tab. It stops after 30 minutes idle.
 
 **Google Cloud:** `bash pipeline/scripts/gcp-deploy.sh` creates one always-on VM with the same Docker setup, a fixed IP
 and a port-80 rule, and copies the project and `imports/data/inbox/`; `--status` and `--logs` show the result. Settings:
