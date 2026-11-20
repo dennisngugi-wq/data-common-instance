@@ -17,20 +17,26 @@ services:
       DISABLE_GOOGLE_MAPS: ${DISABLE_GOOGLE_MAPS:-true}
       SITE_URL: ${SITE_URL:-}
     volumes:
-      - ${HOST_PROJECT_DIR:?set HOST_PROJECT_DIR in .env}/local_dc:/data:ro
-      - ${HOST_PROJECT_DIR}/local_dc_db:/out
-      - ${HOST_PROJECT_DIR}/site/app_env/custom.py:/workspace/server/app_env/custom.py:ro
-      - ${HOST_PROJECT_DIR}/site/templates:/workspace/server/templates/custom_dc/custom:ro
-      - ${HOST_PROJECT_DIR}/site/static:/workspace/server/dist/custom_dc/custom:ro
-      - ${HOST_PROJECT_DIR}/site/data:/workspace/custom_data:ro
-      - ${HOST_PROJECT_DIR}/config/instance.yaml:/workspace/instance.yaml:ro
-      - ${HOST_PROJECT_DIR}/site/config/home_page/sample_questions.json:/workspace/server/config/home_page/sample_questions.json:ro
-      - ${HOST_PROJECT_DIR}/site/config/home_page/partners.json:/workspace/server/config/home_page/partners.json:ro
-      - ${HOST_PROJECT_DIR}/site/config/home_page/topics.json:/workspace/server/config/home_page/topics.json:ro
-      - ${HOST_PROJECT_DIR}/site/config/feature_flags/custom.json:/workspace/server/config/feature_flag_configs/custom.json:ro
-      - ${HOST_PROJECT_DIR}/site/config/header.json:/workspace/server/config/custom_dc/custom/base/header.json:ro
+      - ${HOST_PROJECT_DIR:?set HOST_PROJECT_DIR in .env}/imports/local_dc:/data:ro
+      - ${HOST_PROJECT_DIR}/imports/local_dc_db:/out
+      - ${HOST_PROJECT_DIR}/pipeline/site/app_env/custom.py:/workspace/server/app_env/custom.py:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/templates:/workspace/server/templates/custom_dc/custom:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/templates_core/explore_landing.html:/workspace/server/templates/explore_landing.html:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/static:/workspace/server/dist/custom_dc/custom:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/data:/workspace/custom_data:ro
+      - ${HOST_PROJECT_DIR}/pipeline/config/instance.yaml:/workspace/instance.yaml:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/config/home_page/sample_questions.json:/workspace/server/config/home_page/sample_questions.json:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/config/home_page/partners.json:/workspace/server/config/home_page/partners.json:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/config/home_page/topics.json:/workspace/server/config/home_page/topics.json:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/config/feature_flags/custom.json:/workspace/server/config/feature_flag_configs/custom.json:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/config/header.json:/workspace/server/config/custom_dc/custom/base/header.json:ro
+      - ${HOST_PROJECT_DIR}/pipeline/site/config/footer.json:/workspace/server/config/base/footer.json:ro
+      # Memory-safe launch script (fewer gunicorn workers + recycling)
+      - ${HOST_PROJECT_DIR}/pipeline/docker/run.sh:/workspace/run.sh:ro
     ports:
       - "${SITE_PORT:-8090}:8080"
+    mem_limit: 3g
+    memswap_limit: 6g
     restart: unless-stopped
     profiles: ["site"]
 
@@ -43,16 +49,16 @@ services:
       REFRESH_ON_START: ${REFRESH_ON_START:-true}
       HOST_UID: ${HOST_UID:-1000}
       HOST_GID: ${HOST_GID:-1000}
-      PATH: /project/docker/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PATH: /project/pipeline/docker/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_PROJECT_DIR}:/project
-    command: ["sh", "/project/docker/scheduler.sh"]
+    command: ["sh", "/project/pipeline/docker/scheduler.sh"]
     restart: unless-stopped
 
   pipeline:
     <<: *dc-env
-    build: ./automation
+    build: ./pipeline
     image: dcproject-pipeline:latest
     profiles: ["jobs"]
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
@@ -61,6 +67,7 @@ services:
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
       KNOWLEDGE_DIR: /knowledge
+      SITE_URL: ${SITE_URL:-}
     volumes:
       - ${HOST_PROJECT_DIR}:/project
       - type: bind
@@ -70,10 +77,10 @@ services:
       - sh
       - -c
       - |
-        python automation/src/run_pipeline.py
+        python pipeline/src/run_pipeline.py
         rc=$$?
-        python automation/src/build_local_dc.py || exit 2
-        python automation/src/build_place_index.py
+        python pipeline/src/build_local_dc.py || exit 2
+        python pipeline/src/build_place_index.py
         exit $$rc
 
   loader:
@@ -85,5 +92,5 @@ services:
       OUTPUT_DIR: /out
       USE_SQLITE: "true"
     volumes:
-      - ${HOST_PROJECT_DIR}/local_dc:/data:ro
-      - ${HOST_PROJECT_DIR}/local_dc_db_next:/out
+      - ${HOST_PROJECT_DIR}/imports/local_dc:/data:ro
+      - ${HOST_PROJECT_DIR}/imports/local_dc_db_next:/out

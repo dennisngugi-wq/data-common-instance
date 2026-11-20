@@ -1,0 +1,1047 @@
+[
+  {
+    "id": "economics",
+    "title": "Economics",
+    "description": "154 datasets",
+    "url": "/explore/economics",
+    "browseUrl": "/explore/economics",
+    "icon": "account_balance",
+    "image": "/images/explore_landing/topic-economics.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "Only datasets whose publisher explicitly states a licence are loaded (Croissant rule C4), so GDP, inflation, employment and debt are not shown here until a licensed source is added.",
+    "varCount": 0,
+    "introHtml": "Our economics catalogue spans <strong title=\"154\">154</strong> datasets for 4 countries. We collect our economics information from sources such as: <span>Kenya National Bureau of Statistics, </span><span>HDX, </span><span>Ethiopia Data Portal, </span><span>Nigeria Data Portal, </span><span>ILOSTAT, </span><span>CAPMAS, </span><span>Egypt Data Portal, </span><span>and Humanitarian Data Exchange</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "GDP (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyGdp",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Business births (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthBusinessBirths",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Household income (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenHouseholdIncome",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Informal settlement population (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaInformalSettlementPopulation",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "GNI per capita (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyGniPerCapita",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Food insecurity (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthFoodInsecurity490",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Port throughput (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenPortThroughput",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Tourism expenditure (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaTourismExpenditure",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Producer price index (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyProducerPriceIndex",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Gini coefficient (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthGiniCoefficient",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Poverty headcount (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenPovertyHeadcount",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Tourism receipts (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaTourismReceipts",
+        "country": "Nigeria",
+        "source": "HDX"
+      }
+    ],
+    "catalogueCount": 154
+  },
+  {
+    "id": "agriculture",
+    "title": "Agriculture",
+    "description": "69 datasets",
+    "url": "/explore/agriculture",
+    "browseUrl": "/explore/agriculture",
+    "icon": "agriculture",
+    "image": "/images/explore_landing/topic-equity.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our agriculture catalogue spans <strong title=\"69\">69</strong> datasets for 4 countries. We collect our agriculture information from sources such as: <span>HDX, </span><span>Our World in Data, </span><span>Kenya National Bureau of Statistics, </span><span>AfDB data portal, </span><span>CAPMAS, </span><span>openAFRICA, </span><span>National Information Platform for Food Security and Nutrition, </span><span>and Fao data explorer</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Food price index (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyFoodPriceIndex",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Drought events (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthDroughtEvents",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Agricultural water withdrawals (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenAgriculturalWaterWithdrawals",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Agricultural productivity (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaAgriculturalProductivity",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Agricultural machinery (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyAgriculturalMachinery",
+        "country": "Egypt",
+        "source": "Our World in Data"
+      },
+      {
+        "name": "Farm gate prices (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthFarmGatePrices",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Arable land (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenArableLand",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Agriculture employment (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaAgricultureEmployment",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Cereal production (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyCerealProduction",
+        "country": "Egypt",
+        "source": "Our World in Data"
+      },
+      {
+        "name": "Fertilizer use (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthFertilizerUse523",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Fertilizer use (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenFertilizerUse",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Agriculture exports (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaAgricultureExports",
+        "country": "Nigeria",
+        "source": "HDX"
+      }
+    ],
+    "catalogueCount": 69
+  },
+  {
+    "id": "crime",
+    "title": "Crime",
+    "description": "47 datasets",
+    "url": "/explore/crime",
+    "browseUrl": "/explore/crime",
+    "icon": "gavel",
+    "image": "/images/explore_landing/topic-equity.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our crime catalogue spans <strong title=\"47\">47</strong> datasets for 4 countries. We collect our crime information from sources such as: <span>Kenya National Bureau of Statistics, </span><span>Nigeria National Bureau Of Statistics, </span><span>openAFRICA, </span><span>Open africa, </span><span>Nigeria data portal, </span><span>OpenAfrica, </span><span>frontiers, </span><span>and IDMC</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Burglary (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyBurglary",
+        "country": "Egypt",
+        "source": "Knoema"
+      },
+      {
+        "name": "Corruption perception (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthCorruptionPerception",
+        "country": "Ethiopia",
+        "source": "OpenAfrica"
+      },
+      {
+        "name": "Assault (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenAssault",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Human trafficking victims detected (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaHumanTraffickingVictimsDetected",
+        "country": "Nigeria",
+        "source": "openAFRICA"
+      },
+      {
+        "name": "Government effectiveness (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthGovernmentEffectiveness",
+        "country": "Ethiopia",
+        "source": "ISS"
+      },
+      {
+        "name": "Burglary (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenBurglary",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Trafficking prosecutions (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaTraffickingProsecutions",
+        "country": "Nigeria",
+        "source": "openAFRICA"
+      },
+      {
+        "name": "Conviction rate (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenConvictionRate",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Female prisoners (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaFemalePrisoners407",
+        "country": "Nigeria",
+        "source": "Nigeria National Bureau Of Statistics"
+      },
+      {
+        "name": "Court cases (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenCourtCases",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Juvenile prisoners (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaJuvenilePrisoners",
+        "country": "Nigeria",
+        "source": "Nigeria National Bureau Of Statistics"
+      },
+      {
+        "name": "Criminal cases disposed (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenCriminalCasesDisposed",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      }
+    ],
+    "catalogueCount": 47
+  },
+  {
+    "id": "demographics",
+    "title": "Demographics",
+    "description": "170 datasets",
+    "url": "/explore/demographics",
+    "browseUrl": "/explore/demographics",
+    "icon": "family_restroom",
+    "image": "/images/explore_landing/topic-demographics.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our demographics catalogue spans <strong title=\"170\">170</strong> datasets for 4 countries. We collect our demographics information from sources such as: <span>HDX, </span><span>Ethiopia Data Portal, </span><span>Nigeria Data Portal, </span><span>Kenya National Bureau of Statistics, </span><span>Our World in Data, </span><span>Humanitarian Data Exchange, </span><span>EGYPT DATA PORTAL, </span><span>and Federal Reserve Bank of S.T Louis</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Asylum seekers (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyAsylumSeekers",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Age-standardized mortality (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthAgeStandardizedMortality",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "HIV incidence (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenHivIncidence",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "City population (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaCityPopulation",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Disease prevalence (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyDiseasePrevalence",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Disaster event count (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthDisasterEventCount",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Internally displaced people (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenInternallyDisplacedPeople",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Health expenditure per capita (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaHealthExpenditurePerCapita",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Flood events (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyFloodEvents",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Disease prevalence (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthDiseasePrevalence",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Mental health prevalence (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenMentalHealthPrevalence",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Immunization coverage (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaImmunizationCoverage",
+        "country": "Nigeria",
+        "source": "HDX"
+      }
+    ],
+    "catalogueCount": 170
+  },
+  {
+    "id": "education",
+    "title": "Education",
+    "description": "24 datasets",
+    "url": "/explore/education",
+    "browseUrl": "/explore/education",
+    "icon": "school",
+    "image": "/images/explore_landing/topic-education.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our education catalogue spans <strong title=\"24\">24</strong> datasets for 4 countries. We collect our education information from sources such as: <span>HDX, </span><span>CAPMAS, </span><span>OpenAFRICA, </span><span>Kenya National Bureau of Statistics, </span><span>Our World in Data, </span><span>Ethiopia Data Portal, </span><span>EGYPT DATA PORTAL, </span><span>and Kenya Data Portal</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Adult literacy (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyAdultLiteracy",
+        "country": "Egypt",
+        "source": "CAPMAS"
+      },
+      {
+        "name": "Out-of-school children (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthOutOfSchoolChildren",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "School attendance (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenSchoolAttendance",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Pre-primary enrollment (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaPrePrimaryEnrollment",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Pre-primary enrollment (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyPrePrimaryEnrollment",
+        "country": "Egypt",
+        "source": "CAPMAS"
+      },
+      {
+        "name": "Pre-primary enrollment (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthPrePrimaryEnrollment",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Education expenditure per student (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenEducationExpenditurePerStudent",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Primary completion (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaPrimaryCompletion",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Primary enrollment (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyPrimaryEnrollment",
+        "country": "Egypt",
+        "source": "CAPMAS"
+      },
+      {
+        "name": "Tertiary attainment (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthTertiaryAttainment",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Gender education gap (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenGenderEducationGap",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Secondary enrollment (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaSecondaryEnrollment",
+        "country": "Nigeria",
+        "source": "HDX"
+      }
+    ],
+    "catalogueCount": 24
+  },
+  {
+    "id": "employment",
+    "title": "Employment",
+    "description": "91 datasets",
+    "url": "/explore/employment",
+    "browseUrl": "/explore/employment",
+    "icon": "work",
+    "image": "/images/explore_landing/topic-equity.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our employment catalogue spans <strong title=\"91\">91</strong> datasets for 4 countries. We collect our employment information from sources such as: <span>Kenya National Bureau of Statistics, </span><span>Ethiopia Data Portal, </span><span>Nigeria Data Portal, </span><span>ILOSTAT, </span><span>HDX, </span><span>Our World in Data, </span><span>ILOSTAT Data Explorer, </span><span>and Central Bank of Egypt</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "GDP (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyGdp",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Business births (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthBusinessBirths",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Household income (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenHouseholdIncome",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Consumer price index (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaConsumerPriceIndex",
+        "country": "Nigeria",
+        "source": "Nigeria Data Portal"
+      },
+      {
+        "name": "GNI per capita (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyGniPerCapita",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Gini coefficient (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthGiniCoefficient",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Poverty headcount (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenPovertyHeadcount",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Exports (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaExports",
+        "country": "Nigeria",
+        "source": "Nigeria Data Portal"
+      },
+      {
+        "name": "Producer price index (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyProducerPriceIndex",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Labor productivity (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthLaborProductivity",
+        "country": "Ethiopia",
+        "source": "Our World in Data"
+      },
+      {
+        "name": "Average earnings (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenAverageEarnings",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "GDP (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaGdp",
+        "country": "Nigeria",
+        "source": "Nigeria Data Portal"
+      }
+    ],
+    "catalogueCount": 91
+  },
+  {
+    "id": "energy",
+    "title": "Energy",
+    "description": "41 datasets",
+    "url": "/explore/energy",
+    "browseUrl": "/explore/energy",
+    "icon": "bolt",
+    "image": "/images/explore_landing/topic-sustainability.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our energy catalogue spans <strong title=\"41\">41</strong> datasets for 4 countries. We collect our energy information from sources such as: <span>IEA, </span><span>Kenya National Bureau of Statistics, </span><span>Our World in Data, </span><span>Egypt Data Portal, </span><span>Iea, </span><span>HDX, </span><span>Zenodo, </span><span>and AEP</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Electricity capacity (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyElectricityCapacity",
+        "country": "Egypt",
+        "source": "Egypt Data Portal"
+      },
+      {
+        "name": "Primary energy supply (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthPrimaryEnergySupply",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Electricity access (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenElectricityAccess123",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Road density (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaRoadDensity",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Electricity generation (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyElectricityGeneration",
+        "country": "Egypt",
+        "source": "Egypt Data Portal"
+      },
+      {
+        "name": "Electricity generation (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthElectricityGeneration",
+        "country": "Ethiopia",
+        "source": "IEA"
+      },
+      {
+        "name": "Geothermal capacity (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenGeothermalCapacity",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Electricity access (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaElectricityAccess",
+        "country": "Nigeria",
+        "source": "Our World in Data"
+      },
+      {
+        "name": "Energy exports (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyEnergyExports",
+        "country": "Egypt",
+        "source": "Egypt Data Portal"
+      },
+      {
+        "name": "Energy imports (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthEnergyImports",
+        "country": "Ethiopia",
+        "source": "IEA"
+      },
+      {
+        "name": "Hydro capacity (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenHydroCapacity",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Electricity generation (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaElectricityGeneration",
+        "country": "Nigeria",
+        "source": "Our World in Data"
+      }
+    ],
+    "catalogueCount": 41
+  },
+  {
+    "id": "environment",
+    "title": "Environment",
+    "description": "56 datasets",
+    "url": "/explore/environment",
+    "browseUrl": "/explore/environment",
+    "icon": "eco",
+    "image": "/images/explore_landing/topic-sustainability.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our environment catalogue spans <strong title=\"56\">56</strong> datasets for 4 countries. We collect our environment information from sources such as: <span>HDX, </span><span>Our World in Data, </span><span>Ethiopia Data Portal, </span><span>Kenya National Bureau of Statistics, </span><span>IEA, </span><span>CAPMAS, </span><span>openAFRICA, </span><span>and OpenAfrica</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "GHG emissions (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyGhgEmissions",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Ambient air pollution exposure (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthAmbientAirPollutionExposure",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Climate risk (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenClimateRisk",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "CO2 emissions (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaCo2Emissions337",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Methane emissions (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyMethaneEmissions",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Piped water access (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthPipedWaterAccess",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Drought frequency (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenDroughtFrequency",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Flood exposure (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaFloodExposure",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "PM2.5 (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyPm25",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "CO2 emissions (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthCo2Emissions",
+        "country": "Ethiopia",
+        "source": "Ethiopia Data Portal"
+      },
+      {
+        "name": "Flood exposure (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenFloodExposure",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Forest area (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaForestArea345",
+        "country": "Nigeria",
+        "source": "HDX"
+      }
+    ],
+    "catalogueCount": 56
+  },
+  {
+    "id": "health",
+    "title": "Health",
+    "description": "46 datasets",
+    "url": "/explore/health",
+    "browseUrl": "/explore/health",
+    "icon": "health_and_safety",
+    "image": "/images/explore_landing/topic-health.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our health catalogue spans <strong title=\"46\">46</strong> datasets for 4 countries. We collect our health information from sources such as: <span>HDX, </span><span>EGYPT DATA PORTAL, </span><span>Nigeria Data Portal, </span><span>Open Africa, </span><span>Egypt Open Data Portal, </span><span>Kenya National Bureau of Statistics, </span><span>Our World in Data, </span><span>and openAFRICA</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Disease prevalence (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyDiseasePrevalence",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Age-standardized mortality (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthAgeStandardizedMortality",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "HIV incidence (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenHivIncidence",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Child benefit coverage (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaChildBenefitCoverage",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Antenatal care coverage (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyAntenatalCareCoverage",
+        "country": "Egypt",
+        "source": "EGYPT DATA PORTAL"
+      },
+      {
+        "name": "Disease prevalence (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthDiseasePrevalence",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Mental health prevalence (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenMentalHealthPrevalence",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Early warning coverage (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaEarlyWarningCoverage",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "HIV incidence (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyHivIncidence",
+        "country": "Egypt",
+        "source": "EGYPT DATA PORTAL"
+      },
+      {
+        "name": "Health facilities (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthHealthFacilities",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Road traffic mortality (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenRoadTrafficMortality",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Health expenditure per capita (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaHealthExpenditurePerCapita",
+        "country": "Nigeria",
+        "source": "HDX"
+      }
+    ],
+    "catalogueCount": 46
+  },
+  {
+    "id": "housing",
+    "title": "Housing",
+    "description": "18 datasets",
+    "url": "/explore/housing",
+    "browseUrl": "/explore/housing",
+    "icon": "home",
+    "image": "/images/explore_landing/topic-equity.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our housing catalogue spans <strong title=\"18\">18</strong> datasets for 3 countries. We collect our housing information from sources such as: <span>Kenya National Bureau of Statistics, </span><span>HDX, </span><span>Humanitarian Data Exchange, </span><span>Nigeria data portal, </span><span>openAfrica, </span><span>Ethiopia Data Portal, </span><span>and hdx</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Food insecurity (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthFoodInsecurity490",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Building permits (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenBuildingPermits",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Home internet access (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaHomeInternetAccess",
+        "country": "Nigeria",
+        "source": "Nigeria data portal"
+      },
+      {
+        "name": "Multidimensional poverty (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthMultidimensionalPoverty",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Disability prevalence (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenDisabilityPrevalence92",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Multidimensional poverty (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaMultidimensionalPoverty",
+        "country": "Nigeria",
+        "source": "Nigeria data portal"
+      },
+      {
+        "name": "Social protection coverage (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthSocialProtectionCoverage",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Electricity access (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenElectricityAccess87",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Safely managed drinking water (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaSafelyManagedDrinkingWater",
+        "country": "Nigeria",
+        "source": "Nigeria data portal"
+      },
+      {
+        "name": "Housing stock (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthHousingStock",
+        "country": "Ethiopia",
+        "source": "Ethiopia Data Portal"
+      },
+      {
+        "name": "Housing cost burden (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenHousingCostBurden",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Food insecurity (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaFoodInsecurity333",
+        "country": "Nigeria",
+        "source": "hdx"
+      }
+    ],
+    "catalogueCount": 18
+  },
+  {
+    "id": "other",
+    "title": "Other",
+    "description": "47 datasets",
+    "url": "/explore/other",
+    "browseUrl": "/explore/other",
+    "icon": "category",
+    "image": "/images/explore_landing/topic-equity.svg",
+    "lead": "",
+    "subTopics": [],
+    "examples": [],
+    "charts": [],
+    "indicators": [],
+    "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
+    "varCount": 0,
+    "introHtml": "Our other catalogue spans <strong title=\"47\">47</strong> datasets for 4 countries. We collect our other information from sources such as: <span>Kenya National Bureau of Statistics, </span><span>HDX, </span><span>CBK, </span><span>Our World in Data, </span><span>Kenya Data Portal, </span><span>Kenya National Data Archive (KeNADA), </span><span>International IDEA, </span><span>and CAPMAS</span>.",
+    "questions": [],
+    "compare": [],
+    "visChips": [],
+    "cards": [
+      {
+        "name": "Control of corruption (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyControlOfCorruption",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Asylum applications (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthAsylumApplications",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Public infrastructure investment (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenPublicInfrastructureInvestment",
+        "country": "Kenya",
+        "source": "HDX"
+      },
+      {
+        "name": "Disaster preparedness (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaDisasterPreparedness",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Disaster event count (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyDisasterEventCount",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Women in managerial positions (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthWomenInManagerialPositions",
+        "country": "Ethiopia",
+        "source": "HDX"
+      },
+      {
+        "name": "Air passenger traffic (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenAirPassengerTraffic",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Disaster risk index (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaDisasterRiskIndex",
+        "country": "Nigeria",
+        "source": "HDX"
+      },
+      {
+        "name": "Protected area coverage (Egypt)",
+        "url": "/dataset/DCProjectDataset_cat_EgyProtectedAreaCoverage",
+        "country": "Egypt",
+        "source": "HDX"
+      },
+      {
+        "name": "Women in parliament (Ethiopia)",
+        "url": "/dataset/DCProjectDataset_cat_EthWomenInParliament",
+        "country": "Ethiopia",
+        "source": "Open Africa"
+      },
+      {
+        "name": "Control of corruption (Kenya)",
+        "url": "/dataset/DCProjectDataset_cat_KenControlOfCorruption",
+        "country": "Kenya",
+        "source": "Kenya National Bureau of Statistics"
+      },
+      {
+        "name": "Government debt (Nigeria)",
+        "url": "/dataset/DCProjectDataset_cat_NgaGovernmentDebt",
+        "country": "Nigeria",
+        "source": "HDX"
+      }
+    ],
+    "catalogueCount": 47
+  }
+]

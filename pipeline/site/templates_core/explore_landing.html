@@ -1,0 +1,168 @@
+{#
+  Topic pages at /explore/<topic> (server/routes/explore/html.py, unchanged).
+
+  Modeled on https://datacommons.org/explore/economics: a topic header with a variable-count
+  paragraph and source list, question chips, a "Explore statistical variables ... Visualization
+  tool" chip row, and a "Compare data in relation to <topic>" chip row. Everything is generated
+  from this instance's live catalog (site/config/home_page/topics.json), so a topic with no
+  licensed data says so instead of advertising variables that are not here. /explore/all (or an
+  unknown topic) lists every topic.
+#}
+{%- extends BASE_HTML -%}
+
+{% set topics = config['HOMEPAGE_TOPICS'] %}
+{% set t = (topics | selectattr('id', 'equalto', topic) | list | first) if topics else none %}
+{% set is_hide_full_footer = true %}
+{% set main_id = 'explore-landing' %}
+{% set page_id = 'explore-landing-page' %}
+{% set title = ('Explore ' + t.title) if t else 'Explore topics' %}
+
+{% block head %}
+<style>
+  #explore-landing { padding: 36px 0 64px; font-family: "Google Sans Text", Roboto, sans-serif; }
+  #explore-landing section { max-width: 1100px; margin: 0 auto 34px; padding: 0 16px; }
+  #explore-landing h1 { font-size: 2.25rem; font-weight: 400; margin: 0 0 14px; }
+  #explore-landing .gdc-intro { color: #202124; font-size: 1rem; line-height: 1.7; max-width: 860px; margin: 0; }
+  #explore-landing .gdc-intro strong { font-weight: 600; }
+  #explore-landing h3 { font-size: 1.5rem; font-weight: 400; margin: 0 0 18px; }
+  .gdc-qcols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; align-items: start; }
+  .gdc-qcol { display: flex; flex-direction: column; gap: 14px; }
+  .gdc-qcard { display: inline-block; width: fit-content; max-width: 100%; background: #f8f9fa;
+    border-radius: 16px; padding: 16px 22px; color: #0b57d0; text-decoration: none; font-size: 1rem;
+    line-height: 1.45; box-shadow: 0 1px 2px rgba(60, 64, 67, .1); }
+  .gdc-qcard:hover { background: #f1f6fe; box-shadow: 0 1px 4px rgba(60, 64, 67, .2); }
+  .gdc-qsrc { display: block; color: #5f6368; font-size: .8rem; margin-top: 2px; }
+  .gdc-more { margin: 18px 0 0; }
+  .gdc-more a { color: #0b57d0; text-decoration: none; }
+  .gdc-vischips { display: flex; flex-wrap: wrap; gap: 12px; }
+  .gdc-vischips a { display: inline-flex; align-items: center; gap: 6px; background: #e8f0fe;
+    border-radius: 22px; padding: 9px 18px 9px 14px; color: #0b57d0; text-decoration: none; font-size: .95rem; }
+  .gdc-vischips a:hover { background: #d2e3fc; }
+  .gdc-vischips svg { flex: none; }
+  .gdc-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 24px; }
+  .gdc-charts .gdc-wide { grid-column: 1 / -1; }
+  .gdc-charts > div { min-width: 0; }
+  .gdc-note { color: #5f6368; font-size: .88rem; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  .gdc-note a { color: #0b57d0; }
+  .gdc-topic-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  .gdc-topic-card { display: flex; gap: 16px; align-items: center; padding: 20px; border: 1px solid #e3e3e3;
+    border-radius: 16px; color: inherit; text-decoration: none; background: #fff; }
+  .gdc-topic-card:hover { border-color: #1a73e8; box-shadow: 0 1px 6px rgba(26, 115, 232, .15); }
+  .gdc-topic-card img { width: 72px; flex: none; }
+  .gdc-topic-card h3 { font-size: 1.1rem; margin-bottom: 4px; color: #0b57d0; }
+  .gdc-topic-card p { margin: 0; color: #5f6368; font-size: .9rem; }
+  @media (max-width: 720px) { .gdc-qcols { grid-template-columns: 1fr; } .gdc-charts { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% macro qcards(qs) %}
+<div class="gdc-qcols">
+  {% set half = ((qs | length) + 1) // 2 %}
+  <div class="gdc-qcol">{% for q in qs[:half] %}<a class="gdc-qcard" href="/explore#q={{ q | urlencode }}">{{ q }}</a>{% endfor %}</div>
+  <div class="gdc-qcol">{% for q in qs[half:] %}<a class="gdc-qcard" href="/explore#q={{ q | urlencode }}">{{ q }}</a>{% endfor %}</div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div id="explore-landing" class="container">
+  {% if t %}
+  <section>
+    <h1>{{ t.title }}</h1>
+    <p class="gdc-intro">{{ t.introHtml | safe }}</p>
+  </section>
+
+  {% if t.cards %}
+  <section>
+    <div class="gdc-qcols">
+      {% set half = ((t.cards | length) + 1) // 2 %}
+      <div class="gdc-qcol">{% for d in t.cards[:half] %}<a class="gdc-qcard" href="{{ d.url }}">{{ d.name }}<span class="gdc-qsrc">{{ d.source }}</span></a>{% endfor %}</div>
+      <div class="gdc-qcol">{% for d in t.cards[half:] %}<a class="gdc-qcard" href="{{ d.url }}">{{ d.name }}<span class="gdc-qsrc">{{ d.source }}</span></a>{% endfor %}</div>
+    </div>
+    {% if t.catalogueCount > t.cards | length %}
+    <p class="gdc-more"><a href="/data#{{ t.id if t.id != 'economics' else 'economy' }}">Browse all {{ t.catalogueCount }} {{ t.title | lower }} datasets</a></p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if t.questions %}
+  <section>{{ qcards(t.questions) }}</section>
+  {% endif %}
+
+  {% if t.visChips %}
+  <section>
+    <h3>Explore statistical variables around the world in the Visualization tool</h3>
+    <div class="gdc-vischips">
+      {% for c in t.visChips %}
+      <a href="{{ c.url }}"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"></path></svg>{{ c.label }}</a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if t.compare %}
+  <section>
+    <h3>Compare data in relation to {{ t.title | lower }}</h3>
+    {{ qcards(t.compare) }}
+  </section>
+  {% endif %}
+
+  {% if t.charts %}
+  <section>
+    <h3>Key figures</h3>
+    <div class="gdc-charts">
+      {% for c in t.charts %}
+        {% if c.type == 'map' %}
+        <div class="gdc-wide"><datacommons-map header="{{ c.title }}" parentPlace="{{ c.parentPlace }}" childPlaceType="Country" variable="{{ c.variable }}"></datacommons-map></div>
+        {% elif c.type == 'ranking' %}
+        <div><datacommons-ranking header="{{ c.title }}: highest and lowest" parentPlace="{{ c.parentPlace }}" childPlaceType="Country" variable="{{ c.variable }}" rankingCount="5" showHighestLowest></datacommons-ranking></div>
+        {% elif c.type == 'line' %}
+        <div><datacommons-line header="{{ c.title }}" places="{{ c.places }}" variables="{{ c.variables }}"></datacommons-line></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <p class="gdc-note">
+    Each dataset page shows its publisher, licence and data link, with
+    <a href="https://mlcommons.org/croissant/1.1" target="_blank" rel="noopener">Croissant 1.1</a> metadata.
+    Browse everything on the <a href="/data">Data sources</a> page.
+  </p>
+
+  {% if topics | length > 1 %}
+  <section>
+    <h3>Other topics</h3>
+    <div class="gdc-vischips">
+      {% for o in topics if o.id != t.id %}<a href="{{ o.browseUrl }}">{{ o.title }}</a>{% endfor %}
+      <a href="/explore/all">All topics</a>
+    </div>
+  </section>
+  {% endif %}
+
+  <script>
+    // The web components read from datacommons.org by default; point them at this instance's API.
+    document.querySelectorAll('.gdc-charts > div > *').forEach(function (el) {
+      el.setAttribute('apiRoot', window.location.origin);
+    });
+  </script>
+  <script src="/datacommons.js" async></script>
+
+  {% else %}
+  <section>
+    <h1>Explore topics</h1>
+    <p class="gdc-intro">Every topic in {{ config['NAME'] }}, with the indicators that are actually
+      loaded. For every source and dataset, by topic, see <a href="/data">Data sources</a>.</p>
+  </section>
+  <section>
+    <div class="gdc-topic-cards">
+      {% for o in topics %}
+      <a class="gdc-topic-card" href="{{ o.browseUrl }}">
+        <img src="{{ o.image }}" alt="">
+        <div><h3>{{ o.title }}</h3><p>{{ o.description }}</p></div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

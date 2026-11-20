@@ -23,3 +23,14 @@ CLAUDE.md
 .mcp.json
 
 site/data/
+logs-start.txt
+
+RULES.md
+Croissant Metadata Integration*.pdf
+pipeline/docs/
+.claude/
+
+imports/data/inbox/files/
+imports/data/archive/
+imports/data/outbox/
+pipeline/site/data/

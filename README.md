@@ -11,12 +11,14 @@ statistics-office portals), validates it, publishes only what passes and reloads
 
 | You want to | Go to |
 |---|---|
-| Add data | `data/inbox/links.txt` (one `id link` per line) or `config/sheets.json`; Excel files in `data/inbox/` |
+| Add data | Google Sheets: paste the links in `data/inbox/links.txt` (one per line or separated by commas). Excel: drop the `.xlsx` files in `data/inbox/files/`. Nothing else to edit |
 | Load it now | `docker compose exec scheduler refresh` (or `bash scripts/refresh-now.sh`) |
 | Know what a dataset must have | [`RULES.md`](RULES.md): the pipeline rules, from the Croissant design doc |
+| Know when a refresh failed | `logs/ALERT.txt` (present only while there is a problem), `logs/alerts.log` (history), a chat message if `ALERT_WEBHOOK_URL` is set |
+| Host it on Google Cloud | `bash scripts/gcp-deploy.sh` (see "Host it on Google Cloud") |
 | Read what happened | `logs/pipeline.log` (latest run), `logs/history/` (every run), `logs/pipeline-details.log`, `logs/loader.log`, `logs/last_refresh.txt` |
 | See every check of a dataset | `work/feed_reports/<id>.json`, `work/validation_summary.json` |
-| Change the pipeline | `automation/src/` (code), `automation/tests/` (tests) |
+| Change the pipeline | `pipeline/src/` (code), `pipeline/tests/` (tests) |
 | Change the website | `site/` (see `site/README.md`) |
 | Settings | `config/` (instance, sources, places, registries, custom feeds) |
 | Notes and decisions | `../../mcp agent/knowledge/` (`INDEX.md`, `decisions.md`) |
@@ -50,6 +52,7 @@ tail -f logs/pipeline.log             # follow the first load (15-30 min the fir
 
 Then open **http://localhost:8090**. The result of each refresh is in `logs/last_refresh.txt`. The site and the
 nightly refresh restart by themselves after a reboot (`restart: unless-stopped`); if not, run `bash scripts/start.sh`.
+A computer that is off at midnight refreshes as soon as it is started again.
 
 Notes for a fresh clone:
 - The repository holds code and configuration, not the database: the first start rebuilds all data from the sources.
@@ -58,6 +61,52 @@ Notes for a fresh clone:
 - If Docker Desktop is also installed, opening it switches the `docker` command to Desktop's own engine; the scripts
   always use Docker Engine, and `docker context use default` switches your terminal back.
 - Port 8090 already taken? Set `SITE_PORT` in `.env`.
+
+## Share it from GitHub Codespaces
+
+A public link to a running copy of the site, without a server of your own:
+
+1. Once: repository **Settings > Secrets and variables > Codespaces > New repository secret**, name `DC_API_KEY`,
+   value your Data Commons API key.
+2. **Code > Codespaces > Create codespace** on this branch (it asks for a 4-core / 16 GB machine). The site starts by
+   itself; the first load takes 20-40 minutes (`tail -f logs/pipeline.log`).
+3. **Ports** tab > port **8090** > right-click > **Port visibility > Public**, then share its address
+   (`https://<codespace-name>-8090.app.github.dev`).
+
+The codespace stops after 30 minutes without activity (the link stops working until it is started again) and uses
+your Codespaces hours (free allowance, then paid). For an always-on link, deploy to a server.
+
+## Host it on Google Cloud
+
+One always-on virtual machine (Compute Engine) running the same Docker setup, so the refresh really happens at
+00:00 Africa/Nairobi every night. You need a Google Cloud project with billing and the Google Cloud CLI.
+
+```bash
+gcloud auth login
+gcloud config set project <project id>
+bash scripts/gcp-deploy.sh            # creates the VM, a fixed IP and the port-80 rule, copies the project, starts it
+bash scripts/gcp-deploy.sh --status   # last refresh, any alert, containers
+bash scripts/gcp-deploy.sh --logs     # the latest refresh log
+```
+
+Run `bash scripts/gcp-deploy.sh` again to send newer code, `env.list` or files in `data/inbox/` to the VM (it refuses
+while a refresh is running). Settings, as environment variables: `GCP_ZONE` (default `africa-south1-a`), `GCP_MACHINE`
+(`e2-standard-2`, 8 GB; use `e2-standard-4` if loads are slow), `GCP_DISK_GB` (50), `GCP_VM` (`datacommon-project`),
+`SITE_URL` (default `http://<the VM's fixed IP>`; set it to your own address once a domain points at the VM). The site
+address goes into the Croissant metadata, so set `SITE_URL` before sharing dataset pages. The site is served over plain
+HTTP on port 80; HTTPS needs a domain and a proxy or load balancer in front. Remove everything with
+`gcloud compute instances delete datacommon-project`, `gcloud compute addresses delete datacommon-project-ip` and
+`gcloud compute firewall-rules delete datacommon-project-web`.
+
+## Alerts when a refresh fails
+
+A refresh that fails (the datasets cannot be combined, the database cannot be built, the API key is missing), or one
+where at least half of the datasets could not be downloaded, writes the reason to `logs/ALERT.txt` and adds a line to
+`logs/alerts.log`. The file disappears after the next good refresh (`RECOVERED` in `alerts.log`). The one-click
+launcher shows it as a desktop notification. To also get a chat message (Slack, Google Chat or any webhook that accepts
+`{"text": ...}`), add `ALERT_WEBHOOK_URL=<webhook address>` to `env.list`; try it with
+`docker compose run --rm pipeline python pipeline/src/alert.py "test"`. Single datasets that fail a rule are not
+alerts: they are listed under NEEDS YOUR ATTENTION in `logs/pipeline.log`.
 
 ## Everyday commands
 
@@ -81,9 +130,25 @@ docker ps -a --filter name=dcproject # containers; "Exited (0)" dataset jobs are
 ## Adding data: `data/inbox/links.txt` or `config/sheets.json`
 
 All data comes from spreadsheets you provide (Google Sheets or Excel); the pipeline never scrapes or invents data.
-The quickest way: add a line `<id> <link>` to **`data/inbox/links.txt`** (or drop a `.json` file with the same
-entries in `data/inbox/`), then run `docker compose exec scheduler refresh`. Entries there are on by default.
-The permanent list is [`config/sheets.json`](config/sheets.json); an id may appear only once across both:
+
+- **Google Sheets / download links:** paste the links in **`data/inbox/links.txt`**, one per line or several on a
+  line separated by commas. No id is needed (one is made from the link and stays the same as long as the link does).
+- **Excel files:** drop the `.xlsx` files in **`data/inbox/files/`** (any folder under `data/inbox/` works). They are
+  found by themselves; the file name becomes the id, so do not rename a file after it is loaded.
+- Then run `docker compose exec scheduler refresh`, or wait for midnight. On Google Cloud, run
+  `bash scripts/gcp-deploy.sh` again: it sends the current `data/inbox/` (new, changed and removed files) to the VM.
+
+**No duplicates.** The same link is loaded once; two sheets with the same dataset name and organisation are loaded
+once (the second is reported). A variable whose name is exactly the name of a Data Commons variable uses that
+variable instead of creating a copy (for example `Total population` becomes `Count_Person`), so it appears in the
+tools next to the data Data Commons already has. The log line "Uses existing Data Commons variables" lists them. To
+choose yourself, fill the column **Data Commons variable** in the Variables tab: the variable's id, or `new` to keep
+your own. A decision, once made, is kept (`local_store/sheets/<id>/dc_variables.json`), so ids never change by
+themselves. Other variables are created in this instance's own namespace (`DCProject_...`), which can never collide
+with Data Commons.
+
+The permanent, hand-written list is [`config/sheets.json`](config/sheets.json) (needed only to switch a sheet off,
+or for `registry` / `custom` sheets); an id may appear only once across all of them:
 
 ```json
 { "sheets": [
@@ -97,14 +162,13 @@ The permanent list is [`config/sheets.json`](config/sheets.json); an id may appe
 1. **Fill in the template** [`templates/DataCommon_dataset_template.xlsx`](templates/) (for Google Sheets: upload
    it to Drive and open it with Google Sheets). Tab **About**: dataset name, description, source organisation,
    licence. Tab **Data**: `Place | Date | Variable | Value | Unit`, one row per number (or one column per variable).
-   Tab **Variables** (optional): description, unit, min/max per variable.
-2. **Share** a Google Sheet as "Anyone with the link: Viewer" and copy its link. An Excel file: put it in
-   `data/inbox/` and use its path (`data/inbox/my_file.xlsx`) as the link, or a download link.
-3. **Add an entry** to `config/sheets.json`: `id` (lowercase letters, digits, `_`; never change it later), `link`,
-   `"enabled": true`.
-4. **Try it** (publishes nothing, works while `enabled` is still false): `bash scripts/check-feed.sh <id>`.
+   Tab **Variables** (optional): description, unit, min/max and the Data Commons variable per variable.
+2. **Share** a Google Sheet as "Anyone with the link: Viewer" and paste its link in `data/inbox/links.txt`; put an
+   Excel file in `data/inbox/files/`.
+3. **Try it** (publishes nothing): `bash scripts/check-feed.sh <id>`; the id is printed in the refresh log (for a
+   file it is the file name in lowercase with `_`, for a Google Sheet `gs_...`).
    The report names any cell to fix (missing dataset name, unknown place, a value that is not a number, ...).
-5. **Load it**: `docker compose exec scheduler refresh` (or wait for the nightly run). Then it is on the site: search,
+4. **Load it**: `docker compose exec scheduler refresh` (or wait for the nightly run). Then it is on the site: search,
    Explore, Data sources, the homepage topics.
 
 Edit the sheet any time: the next run picks up the changes. `"enabled": false` stops loading it.
@@ -224,15 +288,15 @@ convention); cubes that mix frequencies get one variable per frequency.
 | `templates/DataCommon_dataset_template.xlsx` | the sheet layout loaded with no other configuration |
 | `config/feeds/*.yaml`, `config/feeds/templates/` | column mappings of `custom` sheets (and the starter feeds) |
 | `config/registries/*.yaml` | how to read `registry` sheets |
-| `automation/src/` | pipeline (`run_pipeline.py`), readers (`fetch.py`, `jsonstat.py`), `normalize.py`, `build_dcp.py` (DCP imports), `build_local_dc.py`, `croissant.py`, `knowledge.py`, `registries.py` |
-| `automation/tests/` | `docker compose run --rm pipeline python -m unittest discover -s automation/tests` |
+| `pipeline/src/` | pipeline (`run_pipeline.py`), readers (`fetch.py`, `jsonstat.py`), `normalize.py`, `build_dcp.py` (DCP imports), `build_local_dc.py`, `croissant.py`, `knowledge.py`, `registries.py` |
+| `pipeline/tests/` | `docker compose run --rm pipeline python -m unittest discover -s pipeline/tests` |
 | `RULES.md` | the rules every dataset must pass |
 | `data/inbox/` | your links (`links.txt`, `*.json`) and Excel files (git-ignored) |
 | `logs/` | refresh logs and their history (git-ignored) |
-| `automation/src/readback_local.py` | every published value read back through the site API (READBACK PASS) |
+| `pipeline/src/readback_local.py` | every published value read back through the site API and compared with what was loaded, per source (`docker compose run --rm pipeline python pipeline/src/readback_local.py --url http://website:8080` prints READBACK PASS) |
 | `site/` | website customization (see `site/README.md`) |
 | `data/published/` | snapshot of the licensed datasets (CSV + MCF, CC BY 4.0) |
-| `local_store/` | published DCP imports (GCS-bucket layout), state, backups, run reports, registry mirrors |
+| `local_store/` | published DCP imports (GCS-bucket layout), state, backups (the last 30 changes are kept), run reports (last 90), registry mirrors |
 | `work/` | raw downloads, per-dataset reports, `validation_summary.json`, Croissant previews |
 
 ## Images

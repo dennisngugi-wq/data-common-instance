@@ -1,0 +1,136 @@
+{#
+  Knowledge Graph landing page.
+
+  Modeled on https://datacommons.org/browser/: a short description of the graph followed by one
+  section per node type (Sources, Datasets, Statistical Variables, Countries), each with example
+  node links into the knowledge-graph node pages (/browser/<dcid>) and an "& more" link to the
+  type page. The examples come from this instance's live catalog, never from datacommons.org's
+  US-centric graph.
+#}
+{%- extends BASE_HTML -%}
+
+{% set main_id = 'browser_landing' %}
+{% set page_id = 'page-browser_landing' %}
+{% set title = 'Knowledge Graph' %}
+
+{% block head %}
+<style>
+  #browser_landing { padding: 40px 0 64px; font-family: "Google Sans Text", Roboto, sans-serif; }
+  #browser_landing .kg-wrap { max-width: 1300px; margin: 0 auto; padding: 0 16px; }
+  #browser_landing h1 { font-size: 2.25rem; font-weight: 400; margin: 0 0 14px; }
+  #browser_landing .kg-lead { font-size: 1rem; color: #202124; line-height: 1.65; max-width: 760px; margin: 0 0 40px; }
+  #browser_landing section { display: flex; gap: 24px; padding: 28px 0; border-top: 1px solid #e8eaed; }
+  #browser_landing section h2 { flex: 0 0 200px; font-size: 1.6rem; font-weight: 400; margin: 0; }
+  #browser_landing .kg-links { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 24px; align-content: start; }
+  #browser_landing .kg-links a { color: #0b57d0; text-decoration: none; font-size: 1rem; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  #browser_landing .kg-links a:hover { text-decoration: underline; }
+  #browser_landing .kg-more { color: #5f6368; }
+  #browser_landing .kg-error { color: #5f6368; }
+  @media (max-width: 900px) {
+    #browser_landing section { flex-direction: column; gap: 10px; }
+    #browser_landing .kg-links { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="browser_landing" class="main-content">
+  <div class="kg-wrap">
+    <h1>Knowledge Graph</h1>
+    <p class="kg-lead">The {{ config['NAME'] }} Knowledge Graph is constructed by synthesizing a single
+      database from many different data sources. This knowledge graph can be used both to explore what data
+      is available and to understand the graph structure.</p>
+    <div id="kg-sections">
+      <section>
+        <h2>Sources</h2>
+        <div class="kg-links" id="kg-sources"><span class="kg-error">Loading…</span></div>
+      </section>
+      <section>
+        <h2>Datasets</h2>
+        <div class="kg-links" id="kg-datasets"></div>
+      </section>
+      <section>
+        <h2>Statistical Variables</h2>
+        <div class="kg-links" id="kg-vars"></div>
+      </section>
+      <section>
+        <h2>Countries</h2>
+        <div class="kg-links" id="kg-places"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function get(name) {
+    return fetch('/custom_dc/custom/' + name, {credentials: 'same-origin'}).then(function (r) {
+      if (!r.ok) throw new Error(name + ' -> ' + r.status);
+      return r.json();
+    });
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+    });
+  }
+  // datacommons.org shows a handful of example nodes per type, then "& more" on the type page.
+  var EXAMPLES = 6;
+  function fill(id, links, moreUrl) {
+    var el = document.getElementById(id);
+    if (!links.length) {
+      el.innerHTML = '<span class="kg-error">None loaded yet — see the <a href="/data">Data sources</a> page.</span>';
+      return;
+    }
+    var shown = links.slice(0, EXAMPLES).map(function (l) {
+      return '<a href="' + l.url + '" title="' + esc(l.dcid) + '">' + esc(l.name) + '</a>';
+    });
+    var more = links.length > EXAMPLES && moreUrl
+      ? '<a class="kg-more" href="' + moreUrl + '">&amp; more</a>' : '';
+    el.innerHTML = shown.join('') + more;
+  }
+  function render(catalog, variables, places, dataPlaces) {
+    var sources = catalog.sources || [];
+    var vars = variables.variables || [];
+    var withData = {};
+    (dataPlaces || []).forEach(function (d) { withData[d.dcid || d] = true; });
+
+    // Sources: creator of the datasets (Croissant `creator`).
+    fill('kg-sources', sources.map(function (s) {
+      return {name: s.name, dcid: s.dcid, url: '/browser/' + encodeURIComponent(s.dcid)};
+    }), '/browser/Source');
+    // Datasets, one node each.
+    var datasets = [];
+    sources.forEach(function (s) { (s.datasets || []).forEach(function (d) {
+      datasets.push({name: d.name, dcid: d.dcid, url: '/browser/' + encodeURIComponent(d.dcid)});
+    }); });
+    fill('kg-datasets', datasets, '/browser/Dataset');
+    // Statistical variables.
+    fill('kg-vars', vars.map(function (v) {
+      return {name: v[1], dcid: v[0], url: '/browser/' + encodeURIComponent(v[0])};
+    }), '/browser/StatisticalVariable');
+    // Countries, places with data first.
+    var pl = (places.places || []).filter(function (p) {
+      return (p.dcid || '').indexOf('country/') === 0;
+    }).sort(function (a, b) {
+      return (withData[b.dcid] ? 1 : 0) - (withData[a.dcid] ? 1 : 0) || (a.name || '').localeCompare(b.name || '');
+    });
+    fill('kg-places', pl.map(function (p) {
+      return {name: p.name || p.dcid, dcid: p.dcid, url: '/browser/' + encodeURIComponent(p.dcid)};
+    }), '/browser/Country');
+  }
+  Promise.all([get('catalog.json'), get('variables.json'),
+               get('places.json'), get('data_places.json').catch(function () { return []; })])
+    .then(function (r) { render(r[0], r[1], r[2], r[3]); })
+    .catch(function (e) {
+      console.error('knowledge graph', e);
+      ['kg-sources', 'kg-datasets', 'kg-vars', 'kg-places'].forEach(function (id) {
+        document.getElementById(id).innerHTML =
+          '<span class="kg-error">Could not load the catalog. See the <a href="/data">Data sources</a> page.</span>';
+      });
+    });
+})();
+</script>
+{% endblock %}
