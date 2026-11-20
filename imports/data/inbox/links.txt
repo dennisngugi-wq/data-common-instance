@@ -1,0 +1,8 @@
+# Links to your sheets: one per line, or several separated by commas. Nothing else is needed.
+#   https://docs.google.com/spreadsheets/d/....../edit        a Google Sheet shared "Anyone with the link: Viewer"
+#   https://example.org/files/my_data.xlsx                    a download link to an Excel file
+# Excel (.xlsx) and CSV catalogue files need no line here: put them in imports/data/inbox/files/ and they are loaded by themselves.
+# Rows that fail a rule are listed in imports/data/outbox/<file> - failures to fix.xlsx (column, rule broken, fix needed).
+# Old form, still read:  <id> <link> [kind]   (kind: dataset, registry or custom)
+# Then run:  docker compose exec scheduler refresh
+# A sheet is loaded only if it passes every rule in RULES.md (licence URL included).
