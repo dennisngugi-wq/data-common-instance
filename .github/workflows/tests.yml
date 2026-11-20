@@ -10,6 +10,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r automation/requirements.txt
-      - run: python -m unittest discover -s automation/tests
-      - run: bash -n scripts/*.sh docker/scheduler.sh
+      - run: pip install -r pipeline/requirements.txt
+      - run: python -m unittest discover -s pipeline/tests
+      - run: bash -n pipeline/scripts/*.sh pipeline/docker/scheduler.sh

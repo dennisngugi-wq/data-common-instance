@@ -18,7 +18,7 @@ statistics-office portals), validates it, publishes only what passes and reloads
 | Host it on Google Cloud | `bash scripts/gcp-deploy.sh` (see "Host it on Google Cloud") |
 | Read what happened | `logs/pipeline.log` (latest run), `logs/history/` (every run), `logs/pipeline-details.log`, `logs/loader.log`, `logs/last_refresh.txt` |
 | See every check of a dataset | `work/feed_reports/<id>.json`, `work/validation_summary.json` |
-| Change the pipeline | `automation/src/` (code), `automation/tests/` (tests) |
+| Change the pipeline | `pipeline/src/` (code), `pipeline/tests/` (tests) |
 | Change the website | `site/` (see `site/README.md`) |
 | Settings | `config/` (instance, sources, places, registries, custom feeds) |
 | Notes and decisions | `../../mcp agent/knowledge/` (`INDEX.md`, `decisions.md`) |
@@ -105,7 +105,7 @@ where at least half of the datasets could not be downloaded, writes the reason t
 `logs/alerts.log`. The file disappears after the next good refresh (`RECOVERED` in `alerts.log`). The one-click
 launcher shows it as a desktop notification. To also get a chat message (Slack, Google Chat or any webhook that accepts
 `{"text": ...}`), add `ALERT_WEBHOOK_URL=<webhook address>` to `env.list`; try it with
-`docker compose run --rm pipeline python automation/src/alert.py "test"`. Single datasets that fail a rule are not
+`docker compose run --rm pipeline python pipeline/src/alert.py "test"`. Single datasets that fail a rule are not
 alerts: they are listed under NEEDS YOUR ATTENTION in `logs/pipeline.log`.
 
 ## Everyday commands
@@ -288,12 +288,12 @@ convention); cubes that mix frequencies get one variable per frequency.
 | `templates/DataCommon_dataset_template.xlsx` | the sheet layout loaded with no other configuration |
 | `config/feeds/*.yaml`, `config/feeds/templates/` | column mappings of `custom` sheets (and the starter feeds) |
 | `config/registries/*.yaml` | how to read `registry` sheets |
-| `automation/src/` | pipeline (`run_pipeline.py`), readers (`fetch.py`, `jsonstat.py`), `normalize.py`, `build_dcp.py` (DCP imports), `build_local_dc.py`, `croissant.py`, `knowledge.py`, `registries.py` |
-| `automation/tests/` | `docker compose run --rm pipeline python -m unittest discover -s automation/tests` |
+| `pipeline/src/` | pipeline (`run_pipeline.py`), readers (`fetch.py`, `jsonstat.py`), `normalize.py`, `build_dcp.py` (DCP imports), `build_local_dc.py`, `croissant.py`, `knowledge.py`, `registries.py` |
+| `pipeline/tests/` | `docker compose run --rm pipeline python -m unittest discover -s pipeline/tests` |
 | `RULES.md` | the rules every dataset must pass |
 | `data/inbox/` | your links (`links.txt`, `*.json`) and Excel files (git-ignored) |
 | `logs/` | refresh logs and their history (git-ignored) |
-| `automation/src/readback_local.py` | every published value read back through the site API and compared with what was loaded, per source (`docker compose run --rm pipeline python automation/src/readback_local.py --url http://website:8080` prints READBACK PASS) |
+| `pipeline/src/readback_local.py` | every published value read back through the site API and compared with what was loaded, per source (`docker compose run --rm pipeline python pipeline/src/readback_local.py --url http://website:8080` prints READBACK PASS) |
 | `site/` | website customization (see `site/README.md`) |
 | `data/published/` | snapshot of the licensed datasets (CSV + MCF, CC BY 4.0) |
 | `local_store/` | published DCP imports (GCS-bucket layout), state, backups (the last 30 changes are kept), run reports (last 90), registry mirrors |
