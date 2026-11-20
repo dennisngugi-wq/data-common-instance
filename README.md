@@ -70,9 +70,12 @@ datacommon-project/
 
 ## Commands you run yourself
 
+First time on a machine, run `bash pipeline/scripts/start.sh` (see "Run it on a new machine"): it writes the paths into
+`.env`, builds the images and starts everything. After that:
+
 ```bash
 export DOCKER_CONTEXT=default                      # use Docker Engine, not Docker Desktop
-docker compose up -d scheduler                     # start the background service (once; it restarts after a reboot)
+docker compose up -d scheduler                     # start the background service if it is not running (it restarts after a reboot)
 cp "my catalogue.xlsx" imports/data/inbox/files/   # drop a catalogue file in the inbox
 bash pipeline/scripts/refresh-now.sh               # run the ingestion (starts within a minute, takes about 6 minutes)
 tail -f pipeline/logs/pipeline.log                 # follow it; the result is in pipeline/logs/last_refresh.txt
