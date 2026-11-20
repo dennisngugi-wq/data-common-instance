@@ -140,6 +140,34 @@ def from_ckan(url, *_):
     return None
 
 
+KNOEMA = re.compile(r"^(?P<origin>https?://[A-Za-z0-9\-]+\.(?:opendataforafrica\.org|knoema\.com))/(?P<id>[A-Za-z0-9]{7,})(?:/|\?|#|$)")
+
+
+def from_knoema(url, *_):
+    m = KNOEMA.match(url)
+    if not m:
+        return None
+    key = re.search(r"[?&]accesskey=([A-Za-z0-9]+)", url)
+    query = f"?accesskey={key.group(1)}" if key else ""
+    status, ctype, body = http(f"{m.group('origin')}/api/1.0/meta/dataset/{m.group('id')}{query}")
+    if status != 200:
+        return None
+    try:
+        dims = [d["id"] for d in json.loads(body.decode("utf-8", "replace"))["dimensions"]]
+    except (ValueError, KeyError, TypeError):
+        return None
+    payload = {"Dataset": m.group("id"), "Header": [{"DimensionId": "Time", "Members": [], "DimensionName": "Time",
+                                                    "DimensionFieldId": "Time"}],
+               "Stub": [{"DimensionId": d, "Members": [], "DimensionName": d} for d in dims],
+               "Filter": [], "Frequencies": []}
+    endpoint = f"{m.group('origin')}/api/1.0/data/pivot/{query}"
+    status, ctype, body = http(endpoint, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+    if status == 200 and body.lstrip().startswith(b'{"header"') and re.search(rb'"data":\s*\[\s*\{', body):
+        return {"download_url": endpoint, "format": "JSON", "method": "Knoema / Open Data for Africa pivot API (POST)",
+                "request": {"method": "POST", "body": json.dumps(payload), "content_type": "application/json"}}
+    return None
+
+
 def sniff_format_from_url(url):
     m = DATA_EXT.search(url)
     return FORMATS.get(m.group(1).lower()) if m else None
@@ -163,7 +191,7 @@ def from_page(url, *_):
     return None
 
 
-STRATEGIES = (from_data_uri, from_databrowser, from_owid, from_fred, from_ckan, from_page)
+STRATEGIES = (from_data_uri, from_databrowser, from_knoema, from_owid, from_fred, from_ckan, from_page)
 
 
 def overrides(config_dir):

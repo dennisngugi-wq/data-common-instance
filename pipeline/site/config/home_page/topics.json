@@ -192,7 +192,7 @@
   {
     "id": "crime",
     "title": "Crime",
-    "description": "47 datasets",
+    "description": "50 datasets",
     "url": "/explore/crime",
     "browseUrl": "/explore/crime",
     "icon": "gavel",
@@ -204,7 +204,7 @@
     "indicators": [],
     "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
     "varCount": 0,
-    "introHtml": "Our crime catalogue spans <strong title=\"47\">47</strong> datasets for 4 countries. We collect our crime information from sources such as: <span>Kenya National Bureau of Statistics, </span><span>Nigeria National Bureau Of Statistics, </span><span>openAFRICA, </span><span>Open africa, </span><span>Nigeria data portal, </span><span>OpenAfrica, </span><span>frontiers, </span><span>and IDMC</span>.",
+    "introHtml": "Our crime catalogue spans <strong title=\"50\">50</strong> datasets for 4 countries. We collect our crime information from sources such as: <span>Kenya National Bureau of Statistics, </span><span>Nigeria National Bureau Of Statistics, </span><span>openAFRICA, </span><span>Nigeria data portal, </span><span>Open africa, </span><span>OpenAfrica, </span><span>frontiers, </span><span>and IDMC</span>.",
     "questions": [],
     "compare": [],
     "visChips": [],
@@ -282,12 +282,12 @@
         "source": "Kenya National Bureau of Statistics"
       }
     ],
-    "catalogueCount": 47
+    "catalogueCount": 50
   },
   {
     "id": "demographics",
     "title": "Demographics",
-    "description": "170 datasets",
+    "description": "171 datasets",
     "url": "/explore/demographics",
     "browseUrl": "/explore/demographics",
     "icon": "family_restroom",
@@ -299,7 +299,7 @@
     "indicators": [],
     "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
     "varCount": 0,
-    "introHtml": "Our demographics catalogue spans <strong title=\"170\">170</strong> datasets for 4 countries. We collect our demographics information from sources such as: <span>HDX, </span><span>Ethiopia Data Portal, </span><span>Nigeria Data Portal, </span><span>Kenya National Bureau of Statistics, </span><span>Our World in Data, </span><span>Humanitarian Data Exchange, </span><span>EGYPT DATA PORTAL, </span><span>and Federal Reserve Bank of S.T Louis</span>.",
+    "introHtml": "Our demographics catalogue spans <strong title=\"171\">171</strong> datasets for 4 countries. We collect our demographics information from sources such as: <span>HDX, </span><span>Ethiopia Data Portal, </span><span>Nigeria Data Portal, </span><span>Kenya National Bureau of Statistics, </span><span>Our World in Data, </span><span>Humanitarian Data Exchange, </span><span>EGYPT DATA PORTAL, </span><span>and Federal Reserve Bank of S.T Louis</span>.",
     "questions": [],
     "compare": [],
     "visChips": [],
@@ -377,7 +377,7 @@
         "source": "HDX"
       }
     ],
-    "catalogueCount": 170
+    "catalogueCount": 171
   },
   {
     "id": "education",
@@ -762,7 +762,7 @@
   {
     "id": "health",
     "title": "Health",
-    "description": "46 datasets",
+    "description": "47 datasets",
     "url": "/explore/health",
     "browseUrl": "/explore/health",
     "icon": "health_and_safety",
@@ -774,7 +774,7 @@
     "indicators": [],
     "emptyMessage": "No licensed datasets are loaded for this topic yet. Only datasets whose publisher states a licence are published here; see Data sources for what is live.",
     "varCount": 0,
-    "introHtml": "Our health catalogue spans <strong title=\"46\">46</strong> datasets for 4 countries. We collect our health information from sources such as: <span>HDX, </span><span>EGYPT DATA PORTAL, </span><span>Nigeria Data Portal, </span><span>Open Africa, </span><span>Egypt Open Data Portal, </span><span>Kenya National Bureau of Statistics, </span><span>Our World in Data, </span><span>and openAFRICA</span>.",
+    "introHtml": "Our health catalogue spans <strong title=\"47\">47</strong> datasets for 4 countries. We collect our health information from sources such as: <span>HDX, </span><span>EGYPT DATA PORTAL, </span><span>Nigeria Data Portal, </span><span>Kenya National Bureau of Statistics, </span><span>Open Africa, </span><span>Egypt Open Data Portal, </span><span>Our World in Data, </span><span>and openAFRICA</span>.",
     "questions": [],
     "compare": [],
     "visChips": [],
@@ -852,7 +852,7 @@
         "source": "HDX"
       }
     ],
-    "catalogueCount": 46
+    "catalogueCount": 47
   },
   {
     "id": "housing",

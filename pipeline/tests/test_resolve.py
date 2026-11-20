@@ -64,3 +64,9 @@ def test_unresolved_row_is_rejected_and_resolved_row_accepted(monkeypatch, tmp_p
     accepted = catalog.validate([rec2])[0]
     assert accepted and accepted[0]["content_url"] == "https://opendata.knbs.or.ke/api/data"
     assert accepted[0]["format"] == "JSON-stat"
+
+
+def test_knoema_dataset_id_and_access_key_are_read_from_the_page_link():
+    m = resolve.KNOEMA.match("https://kenya.opendataforafrica.org/vtknmvb/mortality-by-county-2019?accesskey=anrrqjb")
+    assert (m.group("origin"), m.group("id")) == ("https://kenya.opendataforafrica.org", "vtknmvb")
+    assert resolve.KNOEMA.match("https://www.populationpyramids.org/kenya") is None
